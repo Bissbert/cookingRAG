@@ -8,8 +8,9 @@ import argparse
 import itertools
 from pathlib import Path
 from typing import Optional
-from tqdm import tqdm
+import uuid
 from llama_index.core import VectorStoreIndex
+from util.json_util import recipes_to_json
 from util.ingestion_model_interaction import initModel, aprocess_image_files
 from util.embedding_util import initEmbeddingModel, get_nodes_from_objs
 from util.database_conection import setup_database, setup_vector_store
@@ -38,6 +39,23 @@ def get_image_files(
         return image_paths[:sample]
     else:
         return image_paths
+    
+def save_data_objects_to_json(dataObjects):
+    """
+    Save the dataObjects as a JSON array using the recipes_to_json method.
+
+    Args:
+        dataObjects (List[Recipe]): List of Recipe objects to save.
+
+    Returns:
+        None
+    """
+    json_data = recipes_to_json(dataObjects)
+    filename = f"recipeExport-{uuid.uuid4()}.json"
+    filepath = os.path.join(os.getcwd(), filename)
+    with open(filepath, 'w') as json_file:
+        json_file.write(json_data)
+    print(f"Data objects saved to {filepath}")
 
 async def process_recipe_images(folder_path: str, storage_context):
     """
@@ -57,6 +75,7 @@ async def process_recipe_images(folder_path: str, storage_context):
         return
     
     dataObjects = await aprocess_image_files(imageFiles)
+    save_data_objects_to_json(dataObjects)
     nodes = get_nodes_from_objs(dataObjects)
 
     #log first 5 nodes
