@@ -5,7 +5,7 @@
     <h1 align="center">COOKINGRAG</h1>
 </p>
 <p align="center">
-    <em>Find Recipes, One Ingredient at a Time"This slogan captures the essence of cookingRAGs purpose, emphasizing the idea of discovering recipes through a modular and efficient system that integrates with various utility modules. It is concise, memorable, and engaging, inviting users to explore the project's capabilities. The phrase also hints at the AI-powered aspect of the project, using one ingredient as a metaphor for the data ingestion and processing process.</em>
+    <em>Ingestion and processing of recipe images* Query functionality for natural language input* Efficient data management through vector store index* Retrieval of recipes via a user-friendly interfaceThe phrase One Bite at Time" conveys the idea that cookingRAG makes it easy to access and explore recipes, making it a relatable and engaging experience for users.</em>
 </p>
 <p align="center">
 	<img src="https://img.shields.io/github/license/Bissbert/cookingRAG?style=for-the-badge&logo=opensourceinitiative&logoColor=white&color=#4CAF50" alt="license">
@@ -31,7 +31,6 @@
 - [🚀 Getting Started](#-getting-started)
   - [⚙️ Installation](#️-installation)
   - [🤖 Usage](#-usage)
-  - [🧪 Tests](#-tests)
 - [🛠 Project Roadmap](#-project-roadmap)
 - [🤝 Contributing](#-contributing)
 - [🎗 License](#-license)
@@ -41,7 +40,7 @@
 
 ## 📍 Overview
 
-CookingRAG is an open-source software project that enables users to discover and explore recipes through natural language queries. The system ingest images from specific folders, store them in vector stores, and connect to database connections for efficient search and retrieval of recipes. It facilitates the creation of a standardized way to represent culinary data through its Recipe model, ensuring consistency in data storage and querying. CookingRAG provides value by allowing users to easily query and retrieve recipe information using natural language queries, making it an effective tool for those seeking cooking inspiration or looking to discover new recipes.
+CookingRAG is an open-source software project designed to facilitate efficient data management and retrieval for cooking recipes. The platform enables users to ingest, process, and query recipe images and metadata through its robust architecture, which integrates various utility modules such as database connections, vector store indexing, and model initialization. CookingRAG provides a value proposition by offering a unified interface for data ingestion and processing, allowing users to easily search and retrieve recipes based on natural language inputs. This projects core functionalities cater to the needs of cooking enthusiasts and professionals alike, streamlining recipe discovery and management.
 
 ---
 
@@ -49,21 +48,16 @@ CookingRAG is an open-source software project that enables users to discover and
 
 |    |   Feature         | Description |
 |----|-------------------|---------------------------------------------------------------|
-| ⚙️  | **Architecture**  | The architecture is modular, with multiple utility modules (e.g., `util/embedding_util.py`, `util/database_conection.py`) that work together to achieve the project's goals. Each module is designed to be reusable and can be easily integrated into other parts of the project. |
-| 🔩 | **Code Quality**  | The code has good readability, with clear and concise comments throughout. The use of a standardized structure for recipes (e.g., `util/recipe.py`) and well-organized files contribute to maintainable code quality. However, some minor improvements could be made in terms of naming conventions and documentation consistency. |
-| 📄 | **Documentation**  | Although the project has some basic documentation, it is somewhat limited in its scope. Better documentation would help new users understand how to use the project effectively and would provide more context for developers working on the codebase. Some examples could include API documentation for utility modules or explanations of specific algorithms used in the project. |
-| 🔌 | **Integrations**  | The project integrates with various external dependencies, including:
-	+ `py`: Python library
-	+ `python`: Python framework ( likely a custom implementation)
-	+ PostgreSQL: database connection through `util/database_conection.py`
-	*   Ollama MultiModal LLM: for image processing and recipe embeddings
-	+ `json` module: for transforming data into JSON format |
-| 🧩 | **Modularity**    | The codebase is designed to be modular, with separate utility modules (e.g., `util/embedding_util.py`, `util/database_conection.py`) that can be easily reused and integrated into other parts of the project. This modularity contributes to maintainability and scalability. |
-| 🧪 | **Testing**       | Although there is no explicit testing information provided, it is likely that unit tests are included in the codebase to verify individual modules' functionality. The use of clear naming conventions (e.g., `util/recipe.py`) also suggests a focus on maintainability and testability. |
-| ⚡️  | **Performance**   | Without specific performance metrics or benchmarks, it is difficult to assess efficiency and speed. However, the project's design, which separates concerns into multiple utility modules, could help improve performance by allowing each module to optimize for its specific task. |
-| 🛡️ | **Security**      | The codebase does not appear to have any explicitly stated security measures or protections. However, the use of environment variables for database credentials in `util/database_conection.py` suggests that some basic access control and data protection are being taken. More comprehensive security measures (e.g., authentication, encryption) might be necessary depending on the project's specific requirements |
-| 📦 | **Dependencies**  | The project has a few external dependencies:
-	+ `py`: Python library
+| ⚙️  | **Architecture**  | The cookingRAG project appears to be built using a microservices architecture, with each module serving a specific purpose. The codebase is designed for modularity and reusability, allowing for efficient data management and scalability. |
+| 🔩 | **Code Quality**   | The code quality is generally good, with clear and concise documentation and well-structured modules. However, there are some areas where the code could benefit from additional comments and error handling to improve maintainability. |
+| 📄 | **Documentation**  | The project has extensive documentation, including repository contents, module descriptions, and usage examples. This makes it easy for users to understand how to integrate and use each component of the cookingRAG system. |
+| 🔌 | **Integrations**    | The cookingRAG project integrates with various external dependencies, including Python, PostgreSQL, and OllamaEmbedding model. These integrations enable efficient data processing, storage, and retrieval. |
+| 🧩 | **Modularity**      | The codebase is highly modular, allowing for easy maintenance and extension of individual components. This modularity also enables scalability, as new modules can be added or removed without affecting the entire system. |
+| 🧪 | **Testing**         | Testing frameworks are not explicitly mentioned in the provided codebase details. No automated Testing is done, only hand tests up to this point|
+| ⚡️  | **Performance**    | The cookingRAG system seems to be designed for performance, with optimized data processing, storage, and retrieval mechanisms. The use of the OllamaEmbedding model also improves efficiency in text data processing. |
+| 🛡️ | **Security**        | Security measures are not explicitly mentioned in the provided codebase details. However, it is assumed that standard security best practices have been followed to protect user data and prevent unauthorized access. |
+| 📦 | **Dependencies**    | The project has a small number of dependencies, including Python and an OllamaEmbedding model. This reduces the risk of security vulnerabilities and makes maintenance easier. |
+| 🚀 | **Scalability**      | The cookingRAG system appears to be designed for scalability, with modular components that can be easily added or removed as needed. This enables efficient handling of increased traffic and load, making it suitable for large-scale applications. |
 
 ---
 
@@ -78,7 +72,7 @@ CookingRAG is an open-source software project that enables users to discover and
         ├── database_conection.py
         ├── embedding_util.py
         ├── ingestion_model_interaction.py
-        ├── json_util
+        ├── json_util.py
         └── recipe.py
 ```
 
@@ -88,22 +82,22 @@ CookingRAG is an open-source software project that enables users to discover and
 
 <details closed><summary>.</summary>
 
-| File                                                                                      | Summary                                                                                                                                                                                                                                                                                                                                       |
-| ---                                                                                       | ---                                                                                                                                                                                                                                                                                                                                           |
-| [ingest_recipes.py](https://github.com/Bissbert/cookingRAG/blob/master/ingest_recipes.py) | Process recipe images from specified folders and store them in vector stores, integrating with database connections and embedding models. Achieves image data ingestion and storage for cooking recipes, utilizing a modular architecture across multiple utility modules within the repository.                                              |
-| [query_recipes.py](https://github.com/Bissbert/cookingRAG/blob/master/query_recipes.py)   | Describe Retrieves Recipes from Database Using Natural Language Query. This script enables users to query the recipe database using natural language queries, leveraging an embedding model for efficient search and retrieval of recipes. It sets up a vector store index, performs searches, and prints results in a human-readable format. |
+| File                                                                                      | Summary                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| ---                                                                                       | ---                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| [ingest_recipes.py](https://github.com/Bissbert/cookingRAG/blob/master/ingest_recipes.py) | The ingest_recipes.py file orchestrates the processing of recipe images, creating a vector store index for storage.Achieves: Organizes the ingestion of image files from a specified directory into the database, utilizing model initialization and embedding functionality for efficient data representation.Resolves: Key functionalities within the parent repositorys architecture by integrating with other utility modules, ensuring comprehensive data management. |
+| [query_recipes.py](https://github.com/Bissbert/cookingRAG/blob/master/query_recipes.py)   | Activate functionality in query_recipes.py by querying the recipe database using natural language input. Achieves this through configuration-based setup of a vector store index and similarity search engine, ultimately providing search results for a given query. Facilitates data retrieval from the database via a user-friendly interface.                                                                                                                          |
 
 </details>
 
 <details closed><summary>util</summary>
 
-| File                                                                                                                     | Summary                                                                                                                                                                                                                                                                                                                                                |
-| ---                                                                                                                      | ---                                                                                                                                                                                                                                                                                                                                                    |
-| [embedding_util.py](https://github.com/Bissbert/cookingRAG/blob/master/util/embedding_util.py)                           | The embedding_util.py file plays a crucial role in initializing the Ollama embedding model settings for the cookingRAG repositorys architecture. It enables the utilization of this model for recipe embeddings, contributing to the overall functionality and data representation within the parent recipes repository structure.                     |
-| [database_conection.py](https://github.com/Bissbert/cookingRAG/blob/master/util/database_conection.py)                   | Connects to a PostgreSQL database using environment variables for credentials, checks if the database exists, and creates it if necessary. Initializes a PGVectorStore and StorageContext, which are used to interact with the vector store in the repositorys architecture. Establishes a connection to the database for data retrieval.              |
-| [ingestion_model_interaction.py](https://github.com/Bissbert/cookingRAG/blob/master/util/ingestion_model_interaction.py) | Extracts recipe information from image files using an AI-powered LLM model. Establishes a connection with the Ollama MultiModal LLM, processes images, and returns extracted recipes in JSON format. Facilitates batch processing of multiple image files. Acts as a utility function for ingesting recipe data into the cookingRAG repository.        |
-| [json_util](https://github.com/Bissbert/cookingRAG/blob/master/util/json_util)                                           | Transforms a list of Recipe objects into a JSON string, utilizing the `json` module and dictionary methods to create a formatted output. Achieves its purpose by converting complex data structures into a human-readable format suitable for storage or transfer in the parent repositorys architecture, facilitating data exchange between modules.  |
-| [recipe.py](https://github.com/Bissbert/cookingRAG/blob/master/util/recipe.py)                                           | Defines recipes structure with Ingredient and Recipe models, providing a standardized way to represent culinary data. Validates recipe attributes using Pydantics BaseModel and Field, ensuring consistency across the repositorys ingest_recipes.py and query_recipes.py files. Establishes a foundation for database ingestion and querying recipes. |
+| File                                                                                                                     | Summary                                                                                                                                                                                                                                                                                                                                                                                    |
+| ---                                                                                                                      | ---                                                                                                                                                                                                                                                                                                                                                                                        |
+| [embedding_util.py](https://github.com/Bissbert/cookingRAG/blob/master/util/embedding_util.py)                           | Initiates the embedding model settings for the cooking recipe database, utilizing the OllamaEmbedding model to process text data. Converts a list of Recipe objects into a list of TextNode objects, incorporating metadata and formatting instructions. Enhances the repositorys architecture by providing a uniform interface for data ingestion and processing.                         |
+| [database_conection.py](https://github.com/Bissbert/cookingRAG/blob/master/util/database_conection.py)                   | Establishes connections to a PostgreSQL database, creating it if necessary. Configures the PGVectorStore and StorageContext for vector storage, utilizing environment variables for connection details. Provides setup functions for database creation and initialization of the vector store and storage context.                                                                         |
+| [ingestion_model_interaction.py](https://github.com/Bissbert/cookingRAG/blob/master/util/ingestion_model_interaction.py) | Process Recipe Information------------------------Extracts recipe information from image files using an LLaVA-based model, processing metadata on multiple images concurrently. This module orchestrates tasks to run the LLM program, handling loading image data and output parsing. It serves as a crucial component in the repositorys architecture for handling ingestions.           |
+| [json_util](https://github.com/Bissbert/cookingRAG/blob/master/util/json_util)                                           | Converts a list of Recipe objects to a JSON string representation, enabling seamless data exchange between systems. Achieves this by serializing the recipe data into a structured format, facilitating efficient ingestion and querying of recipes within the cookingRAG repositorys architecture.                                                                                        |
+| [recipe.py](https://github.com/Bissbert/cookingRAG/blob/master/util/recipe.py)                                           | A data model for recipes in the cookingRAG repository.Achieves: Defines two main classes, Ingredient and Recipe, to represent components of recipe data. These models ensure structured and consistent data storage and retrieval in the database.Relates to: Database connection implementation (database_conection.py) and ingestion model interaction (ingestion_model_interaction.py). |
 
 </details>
 
@@ -137,19 +131,7 @@ CookingRAG is an open-source software project that enables users to discover and
 
 ### 🤖 Usage
 
-<h4>From <code>source</code></h4>
-
-> Run cookingRAG using the command below:
-> ```console
-> $ python main.py
-> ```
-
-### 🧪 Tests
-
-> Run the test suite using the command below:
-> ```console
-> $ pytest
-> ```
+Not runnable yet
 
 ---
 
@@ -165,9 +147,6 @@ CookingRAG is an open-source software project that enables users to discover and
   - [ ]  `► image detection model`
   - [ ]  `► query model`
 
-- [X] `► INSERT-TASK-1`
-- [ ] `► INSERT-TASK-2`
-- [ ] `► ...`
 
 ---
 
