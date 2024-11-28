@@ -154,6 +154,16 @@ CookingRAG is an open-source software project that enables users to discover and
 ---
 
 ## 🛠 Project Roadmap
+- [ ] `► ensure ingestion runnable`
+- [ ] `► collect data for ingestion`
+- [ ] `► add query functionality`
+- [ ] `► create webapp for serving functionality`
+- [ ] `► create UI for mobile`
+- [ ] `► add submission of new recipe`
+- [ ] `► finetuning of models for better results and speed`
+  - [ ]  `► embedding model`
+  - [ ]  `► image detection model`
+  - [ ]  `► query model`
 
 - [X] `► INSERT-TASK-1`
 - [ ] `► INSERT-TASK-2`
