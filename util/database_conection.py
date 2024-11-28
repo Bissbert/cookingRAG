@@ -14,6 +14,15 @@ connection_string = f"postgresql://{PG_USER}:{PG_PASSWORD}@{PG_HOST}:{PG_PORT}"
 db_name = PG_DB_NAME
 
 def setup_database():
+    """
+    Set up the PostgreSQL database.
+
+    This function connects to the PostgreSQL server using the provided connection details.
+    It checks if the specified database exists, and if not, it creates the database.
+
+    Raises:
+        psycopg2.DatabaseError: If there is an error connecting to the database or executing SQL commands.
+    """
     conn = psycopg2.connect(connection_string)
     conn.autocommit = True
     with conn.cursor() as c:
@@ -28,6 +37,18 @@ def setup_database():
     conn.close()
 
 def setup_vector_store():
+    """
+    Set up the PGVectorStore and StorageContext.
+
+    This function initializes the PGVectorStore with the specified parameters and creates a StorageContext
+    using the vector store.
+
+    Returns:
+        StorageContext: The storage context initialized with the PGVectorStore.
+
+    Raises:
+        Exception: If there is an error initializing the PGVectorStore or StorageContext.
+    """
     vector_store = PGVectorStore.from_params(
         database=db_name,
         host=PG_HOST,

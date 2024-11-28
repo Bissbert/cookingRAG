@@ -14,10 +14,25 @@ prompt_template_str = """\
 """
 
 def initModel():
+    """
+    Initialize the model settings.
+
+    This function sets the global LLM settings to use the initialized Ollama LLM.
+    """
     Settings.llm = llm
 
 async def pydantic_llm(output_class, image_documents, prompt_template_str):
+    """
+    Run the LLM program with the given output class, image documents, and prompt template.
 
+    Args:
+        output_class (Type): The Pydantic model class to parse the output.
+        image_documents (List[Document]): List of image documents to process.
+        prompt_template_str (str): The prompt template string to use.
+
+    Returns:
+        Any: The response from the LLM program.
+    """
     llm_program = MultiModalLLMCompletionProgram.from_defaults(
         output_parser=PydanticOutputParser(output_class),
         image_documents=image_documents,
@@ -30,6 +45,15 @@ async def pydantic_llm(output_class, image_documents, prompt_template_str):
     return response
 
 async def aprocess_image_file(image_file):
+    """
+    Process a single image file to extract recipe information.
+
+    Args:
+        image_file (str): Path to the image file.
+
+    Returns:
+        Any: The extracted recipe information.
+    """
     # should load one file
     print(f"Image file: {image_file}")
     img_docs = SimpleDirectoryReader(input_files=[image_file]).load_data()
@@ -37,7 +61,15 @@ async def aprocess_image_file(image_file):
     return output
 
 async def aprocess_image_files(image_files):
-    """Process metadata on image files."""
+    """
+    Process metadata on multiple image files.
+
+    Args:
+        image_files (List[str]): List of paths to image files.
+
+    Returns:
+        List[Any]: List of extracted recipe information for each image file.
+    """
     tasks = []
     for image_file in image_files:
         task = aprocess_image_file(image_file)

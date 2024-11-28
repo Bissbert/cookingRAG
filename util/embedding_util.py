@@ -13,10 +13,23 @@ ollama_embedding = OllamaEmbedding(
 )
 
 def initEmbeddingModel():
+    """
+    Initialize the embedding model settings.
+
+    This function sets the global embedding model settings to use the initialized Ollama embedding model.
+    """
     Settings.embed_model = ollama_embedding
 
 def get_nodes_from_objs(recipe_list: List[Recipe]) -> TextNode:
-    """Get nodes from objects."""
+    """
+    Convert a list of Recipe objects into a list of TextNode objects.
+
+    Args:
+        recipe_list (List[Recipe]): List of Recipe objects to convert.
+
+    Returns:
+        List[TextNode]: List of TextNode objects created from the Recipe objects.
+    """
     nodes = []
     for recipe in recipe_list:
 
