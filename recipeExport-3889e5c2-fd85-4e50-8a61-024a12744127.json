@@ -1,0 +1,103 @@
+[
+    {
+        "title": "Mehlsuppe mit Br\u00f6tchen und Eier",
+        "ingredients": [
+            "1/2 Pflanzerl Mehl",
+            "50 ml Wasser",
+            "Salz",
+            "Pfeffer",
+            "1/4 Zwiebel",
+            "2 EL Butter",
+            "2 l Br\u00fche",
+            "100 g Spaetzle",
+            "6 Scheiben Brot (Br\u00f6tchen)",
+            "2 Eier"
+        ],
+        "instructions": [
+            "Zwiebeln und 1/4 Teel\u00f6ffel Butter in einer Pfanne anbraten.",
+            "Dann Mehl hinzuf\u00fcgen und braten bis es weich ist.",
+            "Darauf die Br\u00fche und kurz k\u00f6cheln lassen.",
+            "Zusammen mit Salz und Pfeffer mischen.",
+            "Eier in einen Topf geben und kochen.",
+            "Brothscheiben belegen.",
+            "Spaetzle hinzuf\u00fcgen und alles zusammen 5-10 Minuten k\u00f6cheln lassen.",
+            "Zum Schluss Butter in der Pfanne anbraten und mit der Suppe mischen.",
+            "Garnieren mit Br\u00f6tchen und Eier."
+        ],
+        "cook_time": "20-30 minutes",
+        "type": "baking",
+        "dietary_preference": "vegetarian"
+    },
+    {
+        "title": "Spaetzle im Brei",
+        "ingredients": [
+            "200 g Spaetzle",
+            "5 El Butter",
+            "1 EL Parmesan",
+            "1/2 TL Paprika",
+            "Pfeffer nach Geschmack"
+        ],
+        "instructions": [
+            "Spaetzle in hei\u00dfem Wasser bei 8-9 Minuten garen.",
+            "Einweichen lassen und abgie\u00dfen.",
+            "Butter in einer Pfanne schmelzen. Spaetzle hinzuf\u00fcgen und gut mischen.",
+            "Parmesan hinzuf\u00fcgen und nach Geschmack Pfeffer geben.",
+            "Bei 200\u00b0C bei 30 Minuten backen."
+        ],
+        "cook_time": "20 minutes",
+        "type": "baking",
+        "dietary_preference": "vegetarian"
+    },
+    {
+        "title": "Spaetzle im Brei",
+        "ingredients": [
+            "100 g Spaetzle",
+            "2 Eier",
+            "Salz",
+            "Pfeffer"
+        ],
+        "instructions": [
+            "Spaetzle zubereiten.",
+            "Eier schlagen und in einen Topf mit Wasser geben.",
+            "Salz und Pfeffer hinzuf\u00fcgen.",
+            "Brei erw\u00e4rmen und Spaetzle hinzuf\u00fcgen.",
+            "Alles gut vermengen."
+        ],
+        "cook_time": "",
+        "type": "baking",
+        "dietary_preference": "vegetarian"
+    },
+    {
+        "title": "Spaetzle im Brei",
+        "ingredients": [
+            "100 g Spaetzle"
+        ],
+        "instructions": [
+            "Spaetzle zubereiten."
+        ],
+        "cook_time": "30 minutes",
+        "type": "cooking",
+        "dietary_preference": "vegetarian"
+    },
+    {
+        "title": "Spaetzle im Brei",
+        "ingredients": [
+            "100 g Spaetzle",
+            "250 ml Milch",
+            "75 g Mehl",
+            "1 Prise Salz"
+        ],
+        "instructions": [
+            "Spaetzle zubereiten.",
+            "Milch und Mehl in eine Sch\u00fcssel geben und mit dem Knetwerk zu einem Teig kneten.",
+            "Ein paar Minuten stehen lassen, dann den Teig wieder gut vermengen.",
+            "Teig auf ein flaches Blech legen und in kleine Stifte schneiden.",
+            "Spaetzle ins Mehlwasser klopfen und bei leichtem W\u00fcrgen ca. 5-7 Minuten ziehen lassen.",
+            "Aus den Spaetzlen etwas Br\u00fche geben und mit etwas Butter schmackhaft machen.",
+            "Spaetzle nach Geschmack mit Mehlwasser, Knoblauch, Pf\u00e4nkenpflanzerl, Petersilie oder Kr\u00e4utern abschmecken und servieren."
+        ],
+        "cook_time": "15-20 minutes",
+        "type": "cooking",
+        "dietary_preference": "vegetarian"
+    }
+]

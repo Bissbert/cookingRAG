@@ -32,23 +32,22 @@ def get_nodes_from_objs(recipe_list: List[Recipe]) -> TextNode:
     """
     nodes = []
     for recipe in recipe_list:
-
-        recipe_text = f"Title: {recipe.get('title', 'Unknown Title')}\n"
+        recipe_text = f"Title: {getattr(recipe, 'title', 'Unknown Title')}\n"
+        recipe_text += f"\nCook Time: {getattr(recipe, 'cook_time', 'N/A')}\n"
         recipe_text += f"Ingredients:\n"
-        for item in recipe.get('ingredients', []):
-            ingredient = item.get('ingredient', '')
-            amount = item.get('amount', '')
+        for item in getattr(recipe, 'ingredients', []):
+            ingredient = getattr(item, 'ingredient', '')
+            amount = getattr(item, 'amount', '')
             recipe_text += f"- {ingredient}: {amount}\n"
         recipe_text += "\nInstructions:\n"
-        for idx, step in enumerate(recipe.get('instructions', []), 1):
+        for idx, step in enumerate(getattr(recipe, 'instructions', []), 1):
             recipe_text += f"{idx}. {step}\n"
-        recipe_text += f"\nCook Time: {recipe.get('cook_time', 'N/A')}"
 
         node = TextNode(
             text=recipe_text,
             metadata={
-                "type": recipe.type,
-                "dietary_preference": recipe.vegan,
+                "type": getattr(recipe, 'type', 'Unknown Type'),
+                "dietary_preference": getattr(recipe, 'dietary_preference', 'None'),
             },
         )
         nodes.append(node)

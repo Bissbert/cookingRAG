@@ -2,18 +2,22 @@
 
 import os
 import sys
+import uuid
 import random
+import logging
 import asyncio
 import argparse
 import itertools
 from pathlib import Path
 from typing import Optional
-import uuid
 from llama_index.core import VectorStoreIndex
 from util.json_util import recipes_to_json
 from util.ingestion_model_interaction import initModel, aprocess_image_files
 from util.embedding_util import initEmbeddingModel, get_nodes_from_objs
 from util.database_conection import setup_database, setup_vector_store
+
+# Configure logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 def get_image_files(
     dir_path, sample: Optional[int] = 10, shuffle: bool = False
@@ -116,7 +120,7 @@ async def main():
     storage_context = setup_vector_store()
 
     # Process the recipe images in the folder
-    process_recipe_images(folder_path, storage_context)
+    await process_recipe_images(folder_path, storage_context)
 
 if __name__ == "__main__":
     asyncio.run(main())

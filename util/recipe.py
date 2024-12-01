@@ -16,19 +16,17 @@ class Ingredient(BaseModel):
 
 class Recipe(BaseModel):
     """
-    Represents a recipe.
-
     Attributes:
         title (str): Title of the recipe.
-        ingredients (List[Ingredient]): List of ingredients with their amounts.
-        instructions (List[str]): Step-by-step cooking instructions.
+        ingredients (List[str]): List of ingredients with their amounts.
+        instructionsAsString (str): Step-by-step cooking instructions.
         cook_time (str): Cooking time in a readable format (e.g., '30 minutes').
         type (Literal["baking", "cooking"]): Type of recipe: either baking or cooking.
-        vegan (Literal["vegan", "vegetarian", "meat"]): Dietary preference for the recipe: vegan, vegetarian, or meat-based.
+        dietary_preference (Literal["vegan", "vegetarian", "meat"]): Dietary preference for the recipe: vegan, vegetarian, or meat-based.
     """
     title: str = Field(..., description="Title of the recipe")
-    ingredients: List[Ingredient] = Field(..., description="List of ingredients with their amounts")
-    instructions: List[str] = Field(..., description="Step-by-step cooking instructions")
-    cook_time: str = Field(..., description="Cooking time in a readable format (e.g., '30 minutes')")
-    type: Literal["baking", "cooking"] = Field(..., description="Type of recipe: either baking or cooking")
-    vegan: Literal["vegan", "vegetarian", "meat"] = Field(..., description="Dietary preference for the recipe: vegan, vegetarian, or meat-based")
+    ingredients: List[str] = Field(..., description="List of ingredients with their amounts")
+    instructionsAsString: str = Field(..., description="Step-by-step cooking instructions")
+    cook_time: str = Field(..., description="Total cooking time in a readable format (e.g., '30 minutes')")
+    type: Literal["baking", "cooking", "undefined"] = Field(..., description="Type of recipe: either baking or cooking")
+    dietary_preference: str = Field(..., description="Dietary preference for the recipe: vegan, vegetarian, or meat-based")

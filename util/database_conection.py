@@ -10,7 +10,7 @@ PG_USER = os.environ.get('PG_USER', 'postgres')
 PG_PASSWORD = os.environ.get('PG_PASSWORD', 'your_database_password')  # Replace with your password or use environment variable
 PG_DB_NAME = os.environ.get('PG_DB_NAME', 'recipe_db')
 
-connection_string = f"postgresql://{PG_USER}:{PG_PASSWORD}@{PG_HOST}:{PG_PORT}"
+connection_string = f"postgresql://{PG_USER}:{PG_PASSWORD}@{PG_HOST}:{PG_PORT}/postgres"
 db_name = PG_DB_NAME
 
 def setup_database():
