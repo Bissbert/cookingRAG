@@ -138,9 +138,13 @@ the application.
 ## Duplicate definition
 
 `query_recipes.py` declares its own copy of all five constants and its own
-`setup_vector_store()`, rather than importing this module. The two copies have
-already drifted — the query-side one omits `setup_database()` entirely and uses
-import paths that no longer exist. See [05 — Query](05-query.md).
+`setup_vector_store()`, rather than importing this module. The five constant
+lines are byte-identical between the two files, and so is the
+`PGVectorStore.from_params()` block apart from the name of the variable holding
+the database — `diff` of those ranges is empty. Nothing has diverged yet; the
+cost is that any change has to be made in both places. What the query-side copy
+does lack is `setup_database()`, and its imports use paths that no longer
+exist. See [05 — Query](05-query.md).
 
 The filename is spelled `database_conection.py` (one `n`).
 

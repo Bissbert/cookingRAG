@@ -249,6 +249,23 @@ python3 tools/make_media.py
 | Pillow | 12.0.0 |
 | Date | 2026-09-21 |
 
+## The proposed fixes in BUGS-FOUND.md
+
+[`BUGS-FOUND.md`](BUGS-FOUND.md) records fifteen defects, each with the change
+that would fix it as a fenced diff. **None of those diffs has been applied or
+executed.** They were written by reading the source, and the pipeline could not
+be run at all for the reasons above, so they are unverified proposals. Two are
+flagged in place as needing measurement before anyone applies them: the
+concurrency change (BUG-12), because `workers=5` against a 90B vision model may
+be slower than sequential, and the `embed_dim` change (BUG-09), because the
+width `bge-m3` returns was never observed here.
+
+The line numbers, the quoted source and the reproduction commands in that file
+are checked against the working tree at commit `66f63c74`. The observed
+*outputs* quoted there — the `ImportError`, the `ResolutionImpossible`, the
+node-text preview — are the same ones recorded on this page, from the same
+runs.
+
 ## Things deliberately not measured
 
 | Quantity | Why not |
@@ -257,4 +274,5 @@ python3 tools/make_media.py
 | Query latency | No database, no embedding model. |
 | Retrieval quality / recall | Would need a labelled query set; none exists. |
 | Extraction accuracy as a score | n = 5, one run, unknown model build. Described qualitatively instead. |
+| Whether any diff in [BUGS-FOUND.md](BUGS-FOUND.md) works | Documentation-only pass; nothing was applied, and the pipeline could not be run to test it. |
 | Actual `bge-m3` embedding width | Model not pulled. The mismatch with the hard-coded `embed_dim=1536` is discussed in [04 — Storage](04-storage.md) as a code-level observation, with the runtime width left unmeasured. |

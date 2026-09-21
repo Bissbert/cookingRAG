@@ -13,11 +13,14 @@ describes.
 | 5 | [Query](05-query.md) | [`query_recipes.py`](../query_recipes.py) | The retrieval half. Does not currently import. |
 | 6 | [Configuration](06-configuration.md) | — | Every environment variable, every hard-coded value. |
 | — | [Measurement](measurement.md) | [`tools/`](../tools) | How every number here was produced, and what was not run. |
+| — | [Bugs found](BUGS-FOUND.md) | — | Fifteen defects found while reading the source. None is fixed in this branch. |
 
 ## Reading order
 
 If you only read one, read [03 — Indexing](03-indexing.md): it explains why the
-text that reaches the vector store is not the text you would expect.
+text that reaches the vector store is not the text you would expect. For the
+defects on their own, with a proposed diff each, see
+[BUGS-FOUND.md](BUGS-FOUND.md).
 
 ```mermaid
 flowchart LR

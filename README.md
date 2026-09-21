@@ -166,7 +166,8 @@ media/                generated figures
 | **total** | **480** | **16,700** |
 
 → [Full documentation](docs/README.md) ·
-[how this was measured](docs/measurement.md)
+[how this was measured](docs/measurement.md) ·
+[bugs found](docs/BUGS-FOUND.md)
 
 ## What lands in PostgreSQL
 
@@ -190,7 +191,10 @@ with cosine distance — sensible at this scale, but worth knowing.
 
 ## Known limitations
 
-Ordered by how much they affect the result.
+Ordered by how much they affect the result. Each defect below is written up in
+full in [docs/BUGS-FOUND.md](docs/BUGS-FOUND.md) — file and line, how to
+reproduce it, and the fix that would resolve it as a diff. **None of them is
+fixed in this branch**, which is documentation-only.
 
 - **Ingredients and instructions are never embedded.**
   `get_nodes_from_objs()` reads `recipe.instructions` and `item.ingredient` /
@@ -231,10 +235,19 @@ Ordered by how much they affect the result.
 - **Dietary inference is unverified and was wrong at least once** — a veal-stock
   soup was labelled `vegetarian`. Do not rely on this field for anything that
   matters.
-- **Configuration is read at import time** and duplicated between
-  `util/database_conection.py` and `query_recipes.py`, where the two copies have
-  already drifted.
-- **`PG_DB_NAME` is interpolated unquoted** into `CREATE DATABASE`.
+- **Configuration is read at import time** and duplicated verbatim between
+  `util/database_conection.py:7-11` and `query_recipes.py:11-15`. The two copies
+  are currently byte-identical, so nothing has diverged yet — but any change has
+  to be made twice, by hand.
+- **`PG_DB_NAME` is interpolated unquoted** into `CREATE DATABASE`, on an
+  autocommit connection held by a role with `CREATEDB`
+  ([BUG-08](docs/BUGS-FOUND.md#bug-08)).
+- **The vision-model retry loop catches only `ResponseError`**, so a timeout or
+  a dropped connection is not retried, and by the point above takes the whole
+  run with it ([BUG-14](docs/BUGS-FOUND.md#bug-14)).
+- **The `Recipe` docstring contradicts its own fields**: it documents
+  `dietary_preference` as a three-value `Literal`, but the field is an
+  unconstrained `str` ([BUG-15](docs/BUGS-FOUND.md#bug-15)).
 - **A cloned repository is ~78 MiB for 17 files.** A virtualenv was committed in
   the initial commit and deleted in `7e9c095f`; the blobs remain in history and
   account for **99.3 %** of all object bytes. Deleting files does not shrink
