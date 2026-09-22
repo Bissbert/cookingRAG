@@ -24,7 +24,7 @@ Use the listed ingredients to deduce the dietary preference (e.g., vegetarian, v
 Do not assume the dietary preference is explicitly stated; instead, infer it logically. Keep the dietary preferences short and precice.
 
 """
-print("image_extraction_prompt is: ", image_extraction_prompt)
+logging.debug("image_extraction_prompt is: %s", image_extraction_prompt)
 
 recipe_to_json_template = """
 Input Recipe:
@@ -38,7 +38,7 @@ Return a Python dictionary representing the data, formatted to match the Pydanti
 
 Pydantic Model Definition:
 """
-print("recipe_to_json_template is: ", recipe_to_json_template)
+logging.debug("recipe_to_json_template is: %s", recipe_to_json_template)
 
 
 
