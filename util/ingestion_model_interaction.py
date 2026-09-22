@@ -132,9 +132,23 @@ async def aprocess_image_files(image_files):
         List[Any]: List of extracted recipe information for each image file.
     """
     outputs = []
+    failed_files = []
     for image_file in image_files:
-        output = aprocess_image_file(image_file)
+        try:
+            output = aprocess_image_file(image_file)
+        except Exception:
+            failed_files.append(image_file)
+            logging.exception("Failed to process image file %s", image_file)
+            continue
         outputs.append(output)
+
+    if failed_files:
+        logging.warning(
+            "Processed %d image(s); %d image(s) failed: %s",
+            len(outputs),
+            len(failed_files),
+            ", ".join(str(image_file) for image_file in failed_files),
+        )
 
     print("created all tasks, now running processing")
     #outputs = await run_jobs(tasks, show_progress=True, workers=5)
