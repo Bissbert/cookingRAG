@@ -1,6 +1,7 @@
 
 import logging
 import time
+import httpx
 from llama_index.core import Settings, SimpleDirectoryReader
 from llama_index.core.async_utils import run_jobs
 from llama_index.core.output_parsers import PydanticOutputParser
@@ -9,6 +10,14 @@ from llama_index.multi_modal_llms.ollama import OllamaMultiModal
 from llama_index.llms.ollama import Ollama
 from ollama._types import ResponseError
 from util.recipe import Recipe
+
+
+RETRYABLE_EXCEPTIONS = (
+    ResponseError,
+    httpx.TransportError,
+    TimeoutError,
+    ConnectionError,
+)
 
 # Initialize the Ollama Multimodal Model
 multimodal_model = OllamaMultiModal(model="llama3.2-vision:90b", request_timeout=600.0)
@@ -73,7 +82,7 @@ def pydantic_llm(output_class, image_documents, image_extraction_prompt, recipe_
             logging.info("Recipe extraction successful.")
             logging.info(recipe)
             break
-        except ResponseError as e:
+        except RETRYABLE_EXCEPTIONS as e:
             logging.error(f"Attempt {attempt + 1} failed with error: {e}")
             if attempt < retries - 1:
                 time.sleep(delay)
@@ -96,7 +105,7 @@ def pydantic_llm(output_class, image_documents, image_extraction_prompt, recipe_
             logging.info(f"Raw output from LLM program: {raw_output}")
             output = raw_output
             break
-        except Exception as e:
+        except RETRYABLE_EXCEPTIONS as e:
             logging.error(f"Attempt {attempt + 1} failed with error: {e}")
             if attempt < retries - 1:
                 time.sleep(delay)
