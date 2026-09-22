@@ -29,7 +29,9 @@ def setup_vector_store():
 
 def search_recipes(query, storage_context):
     # Create a query engine
-    index = VectorStoreIndex(storage_context=storage_context)
+    index = VectorStoreIndex.from_vector_store(
+        vector_store=storage_context.vector_store,
+    )
     query_engine = index.as_query_engine(similarity_top_k=5)  # Adjust top_k as needed
 
     # Query the index
