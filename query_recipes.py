@@ -2,8 +2,8 @@
 
 import os
 import argparse
-from llama_index import StorageContext, VectorStoreIndex
-from llama_index.vector_stores import PGVectorStore
+from llama_index.core import StorageContext, VectorStoreIndex
+from llama_index.vector_stores.postgres import PGVectorStore
 
 # === Configuration ===
 
