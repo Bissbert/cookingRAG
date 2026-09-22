@@ -36,12 +36,9 @@ def get_nodes_from_objs(recipe_list: List[Recipe]) -> TextNode:
         recipe_text += f"\nCook Time: {getattr(recipe, 'cook_time', 'N/A')}\n"
         recipe_text += f"Ingredients:\n"
         for item in getattr(recipe, 'ingredients', []):
-            ingredient = getattr(item, 'ingredient', '')
-            amount = getattr(item, 'amount', '')
-            recipe_text += f"- {ingredient}: {amount}\n"
+            recipe_text += f"- {item}\n"
         recipe_text += "\nInstructions:\n"
-        for idx, step in enumerate(getattr(recipe, 'instructions', []), 1):
-            recipe_text += f"{idx}. {step}\n"
+        recipe_text += f"{getattr(recipe, 'instructionsAsString', '')}\n"
 
         node = TextNode(
             text=recipe_text,
@@ -52,4 +49,3 @@ def get_nodes_from_objs(recipe_list: List[Recipe]) -> TextNode:
         )
         nodes.append(node)
     return nodes
-
