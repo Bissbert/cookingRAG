@@ -1,5 +1,6 @@
 import os
 import psycopg2
+from psycopg2 import sql
 from llama_index.vector_stores.postgres import PGVectorStore
 from llama_index.core import StorageContext
 
@@ -27,10 +28,13 @@ def setup_database():
     conn.autocommit = True
     with conn.cursor() as c:
         # Create the database if it doesn't exist
-        c.execute(f"SELECT 1 FROM pg_catalog.pg_database WHERE datname = '{db_name}'")
+        c.execute(
+            "SELECT 1 FROM pg_catalog.pg_database WHERE datname = %s",
+            (db_name,),
+        )
         exists = c.fetchone()
         if not exists:
-            c.execute(f"CREATE DATABASE {db_name}")
+            c.execute(sql.SQL("CREATE DATABASE {}").format(sql.Identifier(db_name)))
             print(f"Database '{db_name}' created.")
         else:
             print(f"Database '{db_name}' already exists.")
