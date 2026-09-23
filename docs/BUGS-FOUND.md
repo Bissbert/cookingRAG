@@ -4,15 +4,25 @@
 [known limitations](../README.md#known-limitations)
 
 Fifteen defects found while reading the source for this documentation pass.
-**None of them is fixed in this branch.** The pass is documentation-only, so
+None of them was fixed during the pass itself, which was documentation-only, so
 each one is recorded here with the change that would fix it, and the rest of
-the documentation describes the code as it actually behaves today, bug
-included.
+the documentation describes the code as it behaved at the time, bug included.
 
-The diffs below are written from reading the source. **None has been applied
-or executed**, because the pipeline could not be run at all — see
-[measurement.md](measurement.md) for why. Treat them as proposals to review,
-not as tested patches.
+The diffs below were written from reading the source. None had been applied or
+executed at the time of writing, because the pipeline could not be run at all —
+see [measurement.md](measurement.md) for why.
+
+> **Since this pass:** an independent adjudication confirmed twelve of the
+> fifteen entries recorded here and rejected BUG-06, BUG-10 and BUG-12. A
+> subsequent fix pass applied ten of the twelve to the default branch: BUG-01
+> (`13980e08`), BUG-02 (`418911ae`), BUG-03 (`f23d17df`), BUG-05 (`8b10cf36`),
+> BUG-07 (`918f46c9`), BUG-08 (`6ab82c23`), BUG-11 (`1c87901c`), BUG-13
+> (`13251ae9`), BUG-14 (`85fc8f93`) and BUG-15 (`7693ae8a`). BUG-04 and BUG-09
+> were deferred because each needs a product decision — the supported local
+> query model and its embedding identity, and a canonical embedding width with
+> a reindex plan for the existing vector column — rather than a patch. Read the
+> reproductions and diffs below as the state at the time of the pass, not as
+> the current state of the default branch.
 
 ## Where they land
 

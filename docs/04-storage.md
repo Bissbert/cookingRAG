@@ -4,6 +4,13 @@
 [`util/database_conection.py`](../util/database_conection.py) · 62 lines ·
 2,254 bytes
 
+> **Status note.** This write-up describes the code as it stood during the
+> documentation pass. BUG-08 — the database name interpolated unquoted into SQL
+> — has since been fixed on the default branch in commit `6ab82c23`. BUG-09,
+> the hard-coded `embed_dim=1536` against `bge-m3`, is confirmed and still
+> open: changing the width needs a reindex plan for the existing vector column.
+> See [Bugs found](BUGS-FOUND.md).
+
 Two functions. `setup_database()` makes sure the target database exists;
 `setup_vector_store()` builds the `PGVectorStore` and wraps it in a
 `StorageContext`. Between them they own every database-related decision in the
