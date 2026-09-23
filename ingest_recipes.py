@@ -38,7 +38,8 @@ def get_image_files(
     for image_path in itertools.chain(dir_path.glob("*.jpg"), dir_path.glob("*.jpeg"), dir_path.glob("*.png")):
         image_paths.append(image_path)
 
-    random.shuffle(image_paths)
+    if shuffle:
+        random.shuffle(image_paths)
     if sample:
         return image_paths[:sample]
     else:

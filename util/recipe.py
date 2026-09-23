@@ -21,8 +21,8 @@ class Recipe(BaseModel):
         ingredients (List[str]): List of ingredients with their amounts.
         instructionsAsString (str): Step-by-step cooking instructions.
         cook_time (str): Cooking time in a readable format (e.g., '30 minutes').
-        type (Literal["baking", "cooking"]): Type of recipe: either baking or cooking.
-        dietary_preference (Literal["vegan", "vegetarian", "meat"]): Dietary preference for the recipe: vegan, vegetarian, or meat-based.
+        type (Literal["baking", "cooking", "undefined"]): Type of recipe, when known.
+        dietary_preference (str): Dietary preference for the recipe.
     """
     title: str = Field(..., description="Title of the recipe")
     ingredients: List[str] = Field(..., description="List of ingredients with their amounts")

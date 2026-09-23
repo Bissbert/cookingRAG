@@ -1,6 +1,7 @@
 
 import logging
 import time
+import httpx
 from llama_index.core import Settings, SimpleDirectoryReader
 from llama_index.core.async_utils import run_jobs
 from llama_index.core.output_parsers import PydanticOutputParser
@@ -9,6 +10,14 @@ from llama_index.multi_modal_llms.ollama import OllamaMultiModal
 from llama_index.llms.ollama import Ollama
 from ollama._types import ResponseError
 from util.recipe import Recipe
+
+
+RETRYABLE_EXCEPTIONS = (
+    ResponseError,
+    httpx.TransportError,
+    TimeoutError,
+    ConnectionError,
+)
 
 # Initialize the Ollama Multimodal Model
 multimodal_model = OllamaMultiModal(model="llama3.2-vision:90b", request_timeout=600.0)
@@ -24,7 +33,7 @@ Use the listed ingredients to deduce the dietary preference (e.g., vegetarian, v
 Do not assume the dietary preference is explicitly stated; instead, infer it logically. Keep the dietary preferences short and precice.
 
 """
-print("image_extraction_prompt is: ", image_extraction_prompt)
+logging.debug("image_extraction_prompt is: %s", image_extraction_prompt)
 
 recipe_to_json_template = """
 Input Recipe:
@@ -38,7 +47,7 @@ Return a Python dictionary representing the data, formatted to match the Pydanti
 
 Pydantic Model Definition:
 """
-print("recipe_to_json_template is: ", recipe_to_json_template)
+logging.debug("recipe_to_json_template is: %s", recipe_to_json_template)
 
 
 
@@ -73,7 +82,7 @@ def pydantic_llm(output_class, image_documents, image_extraction_prompt, recipe_
             logging.info("Recipe extraction successful.")
             logging.info(recipe)
             break
-        except ResponseError as e:
+        except RETRYABLE_EXCEPTIONS as e:
             logging.error(f"Attempt {attempt + 1} failed with error: {e}")
             if attempt < retries - 1:
                 time.sleep(delay)
@@ -96,7 +105,7 @@ def pydantic_llm(output_class, image_documents, image_extraction_prompt, recipe_
             logging.info(f"Raw output from LLM program: {raw_output}")
             output = raw_output
             break
-        except Exception as e:
+        except RETRYABLE_EXCEPTIONS as e:
             logging.error(f"Attempt {attempt + 1} failed with error: {e}")
             if attempt < retries - 1:
                 time.sleep(delay)
@@ -132,9 +141,23 @@ async def aprocess_image_files(image_files):
         List[Any]: List of extracted recipe information for each image file.
     """
     outputs = []
+    failed_files = []
     for image_file in image_files:
-        output = aprocess_image_file(image_file)
+        try:
+            output = aprocess_image_file(image_file)
+        except Exception:
+            failed_files.append(image_file)
+            logging.exception("Failed to process image file %s", image_file)
+            continue
         outputs.append(output)
+
+    if failed_files:
+        logging.warning(
+            "Processed %d image(s); %d image(s) failed: %s",
+            len(outputs),
+            len(failed_files),
+            ", ".join(str(image_file) for image_file in failed_files),
+        )
 
     print("created all tasks, now running processing")
     #outputs = await run_jobs(tasks, show_progress=True, workers=5)
