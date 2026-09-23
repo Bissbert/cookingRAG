@@ -2,6 +2,12 @@
 
 [← back to the overview](../README.md)
 
+> **Status note.** The measurements below were taken during the documentation
+> pass, before ten of the recorded defects were fixed. Entries that record a
+> failure caused by one of those defects — the `query_recipes.py` `ImportError`
+> in particular — no longer reproduce on the default branch. See
+> [Bugs found](BUGS-FOUND.md).
+
 Every number in this repository's documentation comes from a command that was
 actually run on one machine. The scripts that produced them live in
 [`tools/`](../tools) and are plain Python 3. Only `tools/make_media.py` needs a

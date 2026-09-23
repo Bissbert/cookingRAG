@@ -4,6 +4,13 @@
 [`util/recipe.py`](../util/recipe.py) (31 lines) ·
 [`util/embedding_util.py`](../util/embedding_util.py) (55 lines)
 
+> **Status note.** This write-up describes the code as it stood during the
+> documentation pass. BUG-01 — the flattening step reading `Recipe` fields that
+> do not exist, so only the title and cook time were embedded — has since been
+> fixed on the default branch in commit `13980e08`, and BUG-15, the `Recipe`
+> docstring that contradicted its own fields, in commit `7693ae8a`. See
+> [Bugs found](BUGS-FOUND.md).
+
 Between extraction and storage sits a flattening step: each `Recipe` object is
 rendered into one plain-text string, wrapped in a `TextNode` with two metadata
 keys, and handed to the embedding model. This is the step that decides what the

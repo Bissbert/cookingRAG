@@ -8,12 +8,12 @@ describes.
 |---|---|---|---|
 | 1 | [Ingestion](01-ingestion.md) | [`ingest_recipes.py`](../ingest_recipes.py) | Picks ten random images and drives the whole run, sequentially. |
 | 2 | [Extraction](02-extraction.md) | [`util/ingestion_model_interaction.py`](../util/ingestion_model_interaction.py) | Two Ollama models in series: photo → free text → `Recipe`. |
-| 3 | [Indexing](03-indexing.md) | [`util/recipe.py`](../util/recipe.py), [`util/embedding_util.py`](../util/embedding_util.py) | Flattens a `Recipe` to text — and drops the ingredients and instructions doing it. |
+| 3 | [Indexing](03-indexing.md) | [`util/recipe.py`](../util/recipe.py), [`util/embedding_util.py`](../util/embedding_util.py) | Flattens a `Recipe` to text. It dropped the ingredients and instructions doing it; that is now fixed. |
 | 4 | [Storage](04-storage.md) | [`util/database_conection.py`](../util/database_conection.py) | One row per recipe in `public.data_recipes`, no vector index. |
-| 5 | [Query](05-query.md) | [`query_recipes.py`](../query_recipes.py) | The retrieval half. Does not currently import. |
+| 5 | [Query](05-query.md) | [`query_recipes.py`](../query_recipes.py) | The retrieval half. It did not import at the time of this pass; that is now fixed. |
 | 6 | [Configuration](06-configuration.md) | — | Every environment variable, every hard-coded value. |
 | — | [Measurement](measurement.md) | [`tools/`](../tools) | How every number here was produced, and what was not run. |
-| — | [Bugs found](BUGS-FOUND.md) | — | Fifteen defects found while reading the source. None is fixed in this branch. |
+| — | [Bugs found](BUGS-FOUND.md) | — | Fifteen defects found while reading the source. Twelve confirmed on review, ten since fixed. |
 
 ## Reading order
 

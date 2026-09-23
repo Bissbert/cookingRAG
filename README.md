@@ -9,9 +9,10 @@ it, and stores it in PostgreSQL with pgvector. Nothing leaves the machine — th
 vision model, the structuring model and the embedding model all run under
 Ollama.
 
-It is a 480-line experiment, not a product, and parts of it do not currently
-work. The [known limitations](#known-limitations) are specific and are worth
-reading before you try to use it.
+It is a small experiment, not a product. Ten of the fifteen defects this
+documentation describes have since been fixed on the default branch; the
+[known limitations](#known-limitations) separate what is still open from what
+was repaired, and are worth reading before you try to use it.
 
 ## The pipeline
 
@@ -58,7 +59,6 @@ cd cookingRAG
 
 python3 -m venv venv && . venv/bin/activate
 
-# NOTE: requirements.txt does not resolve as committed - see below
 pip install -r requirements.txt
 
 # All three models are required. The vision model is a ~55 GB download.
@@ -81,8 +81,7 @@ Two corrections to the previous instructions:
   (`nargs='+'`). `python query_recipes.py` with no arguments is an argparse
   error.
 
-And one thing the commands above will not survive: `pip install -r
-requirements.txt` fails as committed.
+At the time of this pass `pip install -r requirements.txt` failed as committed:
 
 ```
 ERROR: Cannot install -r requirements.txt (line 8) and pydantic==1.10.17
@@ -92,15 +91,15 @@ because these package versions have conflicting dependencies.
 ERROR: ResolutionImpossible
 ```
 
-Deleting the `pydantic==1.10.17` line lets the rest install cleanly; pip then
-picks pydantic 2.9.2. That is a real fix to a real conflict, but it is a change
-to a checked-in file and has been left for the maintainer to make.
+The pin has since been changed to `pydantic==2.9.2`, which satisfies
+`llama-index-core` 0.12.2. A full install was not run to confirm the whole set
+resolves.
 
 ## Requirements
 
 | | Needed | Notes |
 |---|---|---|
-| Python | 3.11 tested | `requirements.txt` needs the pydantic pin dropped. |
+| Python | 3.11 tested | The conflicting pydantic pin has been corrected to `2.9.2`. |
 | Ollama | daemon on `localhost:11434` | Hard-coded; `OLLAMA_HOST` is not honoured. |
 | `llama3.2-vision:90b` | image → text | ~55 GB. `:11b` is a one-line substitution, unevaluated here. |
 | `qwq` | text → structured `Recipe` | |
@@ -191,68 +190,95 @@ with cosine distance — sensible at this scale, but worth knowing.
 
 ## Known limitations
 
-Ordered by how much they affect the result. Each defect below is written up in
-full in [docs/BUGS-FOUND.md](docs/BUGS-FOUND.md) — file and line, how to
-reproduce it, and the fix that would resolve it as a diff. **None of them is
-fixed in this branch**, which is documentation-only.
+Each defect below is written up in full in
+[docs/BUGS-FOUND.md](docs/BUGS-FOUND.md) — file and line, how to reproduce it,
+and the fix as a diff. An independent adjudication of those fifteen entries
+confirmed twelve and rejected three; ten of the twelve have since been fixed on
+the default branch. What is left is listed first.
 
-- **Ingredients and instructions are never embedded.**
-  `get_nodes_from_objs()` reads `recipe.instructions` and `item.ingredient` /
-  `item.amount`, but the current `Recipe` has `instructionsAsString` and a plain
-  `List[str]` of ingredients. Every read is a `getattr` with a default, so
-  nothing raises — each ingredient renders as `- : ` and the instruction loop
-  never runs. The stored text is title and cook time only. A query for
-  "something with lentils" cannot match on "lentils".
-  [Details](docs/03-indexing.md).
-- **`query_recipes.py` does not import.** It uses the pre-0.10 flat
-  `llama_index` layout against the pinned 0.12.2. Behind that are three more
-  problems: the index is constructed without nodes instead of with
-  `from_vector_store`, no response LLM is configured (so `llama_index` would
-  fall back to OpenAI, contradicting the local-only premise), and no embedding
-  model is set for the question. [Details](docs/05-query.md).
-- **`requirements.txt` does not resolve.** The `pydantic==1.10.17` pin
-  contradicts `llama-index-core` 0.12.2.
+### Still open
+
+- **No LLM and no embedding model are configured for the query path**
+  ([BUG-04](docs/BUGS-FOUND.md#bug-04)). `query_recipes.py` imports and builds
+  its index correctly now, but without a configured response model
+  `llama_index` falls back to OpenAI, which contradicts the local-only premise.
+  Choosing the supported local query model — and an embedding identity that
+  matches the historical vectors — is a product decision, so nothing was
+  guessed. [Details](docs/05-query.md).
+- **`embed_dim=1536` is hard-coded** while the embedding model is `bge-m3`
+  ([BUG-09](docs/BUGS-FOUND.md#bug-09)). 1536 is the OpenAI/`PGVectorStore`
+  default; the Ollama metadata for `bge-m3` reports 1024. Changing the width is
+  not a patch — it needs a canonical embedding model and a reindex plan for the
+  existing vector column. [Details](docs/04-storage.md).
+- **At most 10 images per run.** `sample=10` is hard-coded with no CLI flag.
+  The order is now the discovered order unless `shuffle=True` is passed.
 - **Extraction on handwriting was not reliable** in the one recorded run: four
   of five images produced the same wrong title. Not quantified beyond that.
-- **`initModel()` is an empty function.** Its only statement is commented out,
-  so `Settings.llm` is never set anywhere in the project.
-- **At most 10 images per run, chosen at random.** `sample=10` and an
-  unconditional `random.shuffle()` are both hard-coded with no CLI flag. The
-  `shuffle` parameter is declared and never read.
-- **Ingestion is sequential despite the async scaffolding.**
-  `aprocess_image_file` is a synchronous function called in a plain loop; the
-  `run_jobs(..., workers=5)` call is commented out. Two model round-trips per
-  image, one image at a time.
-- **One failure loses the whole run.** The JSON export and the database write
-  both happen only after every image is processed, and there is no per-image
-  error handling.
-- **`embed_dim=1536` is hard-coded** while the embedding model is `bge-m3`. 1536
-  is the OpenAI/`PGVectorStore` default. The width bge-m3 actually returns was
-  **not measured** here — the model was not available. A mismatch would fail
-  loudly on first insert. [Details](docs/04-storage.md).
 - **The vision prompt's translation instruction was not followed** in the
   recorded run; all output stayed in German.
 - **Dietary inference is unverified and was wrong at least once** — a veal-stock
   soup was labelled `vegetarian`. Do not rely on this field for anything that
   matters.
 - **Configuration is read at import time** and duplicated verbatim between
-  `util/database_conection.py:7-11` and `query_recipes.py:11-15`. The two copies
-  are currently byte-identical, so nothing has diverged yet — but any change has
-  to be made twice, by hand.
-- **`PG_DB_NAME` is interpolated unquoted** into `CREATE DATABASE`, on an
-  autocommit connection held by a role with `CREATEDB`
-  ([BUG-08](docs/BUGS-FOUND.md#bug-08)).
-- **The vision-model retry loop catches only `ResponseError`**, so a timeout or
-  a dropped connection is not retried, and by the point above takes the whole
-  run with it ([BUG-14](docs/BUGS-FOUND.md#bug-14)).
-- **The `Recipe` docstring contradicts its own fields**: it documents
-  `dietary_preference` as a three-value `Literal`, but the field is an
-  unconstrained `str` ([BUG-15](docs/BUGS-FOUND.md#bug-15)).
+  `util/database_conection.py` and `query_recipes.py`. The two copies are
+  byte-identical, so nothing has diverged yet — but any change has to be made
+  twice, by hand.
 - **A cloned repository is ~78 MiB for 17 files.** A virtualenv was committed in
   the initial commit and deleted in `7e9c095f`; the blobs remain in history and
   account for **99.3 %** of all object bytes. Deleting files does not shrink
   history — only a rewrite would. `python3 tools/repo_size.py` shows the
   breakdown.
+
+### Recorded, then rejected on review
+
+- **`initModel()` is an empty function** ([BUG-06](docs/BUGS-FOUND.md#bug-06)).
+  It is a no-op, but ingestion passes its model explicitly and the query entry
+  point never calls it, so no runtime defect follows. Dead scaffolding, not a
+  broken initialization path.
+- **`recipe.dict()` is removed in pydantic 3**
+  ([BUG-10](docs/BUGS-FOUND.md#bug-10)). A future-major removal, not a present
+  failure of the pinned dependency set.
+- **Ingestion is sequential despite the async scaffolding**
+  ([BUG-12](docs/BUGS-FOUND.md#bug-12)). Accurate as a description, but nothing
+  in the contract or in a measurement promises parallel execution, and the
+  proposed change still wraps blocking model calls. An optimization proposal,
+  not a functional bug.
+
+### Fixed on the default branch since this pass
+
+- **Ingredients and instructions were never embedded**
+  ([BUG-01](docs/BUGS-FOUND.md#bug-01)). `get_nodes_from_objs()` read fields the
+  `Recipe` does not have, so the stored text was title and cook time only. It
+  now renders the string ingredients and `instructionsAsString`.
+  [Details](docs/03-indexing.md).
+- **`query_recipes.py` did not import**
+  ([BUG-02](docs/BUGS-FOUND.md#bug-02)). It used the pre-0.10 flat
+  `llama_index` layout against the pinned 0.12.2; the imports now match the
+  pinned package layout.
+- **The query index was built with no nodes and no vector store**
+  ([BUG-03](docs/BUGS-FOUND.md#bug-03)). It is now constructed with
+  `VectorStoreIndex.from_vector_store`, so it reads the persisted vectors.
+- **`requirements.txt` did not resolve**
+  ([BUG-05](docs/BUGS-FOUND.md#bug-05)). The `pydantic` pin is now `2.9.2`.
+- **The `shuffle` parameter was declared and never read**
+  ([BUG-07](docs/BUGS-FOUND.md#bug-07)). `random.shuffle` is now called only
+  when `shuffle=True`.
+- **`PG_DB_NAME` was interpolated unquoted** into SQL
+  ([BUG-08](docs/BUGS-FOUND.md#bug-08)). The existence check binds the name as
+  a parameter and creation uses `psycopg2.sql.Identifier`.
+- **Both prompts were printed on import**
+  ([BUG-11](docs/BUGS-FOUND.md#bug-11)). They are now `logging.debug` calls.
+- **One failure lost the whole run**
+  ([BUG-13](docs/BUGS-FOUND.md#bug-13)). Batch extraction now catches failures
+  per image, logs them, and returns the successful results. A durable
+  checkpoint was deliberately not invented.
+- **The vision-model retry loop caught only `ResponseError`**
+  ([BUG-14](docs/BUGS-FOUND.md#bug-14)). Both retry loops now cover transport
+  failures, timeouts and connection failures, and no longer retry validation or
+  programming errors.
+- **The `Recipe` docstring contradicted its own fields**
+  ([BUG-15](docs/BUGS-FOUND.md#bug-15)). It now documents the `undefined` type
+  option and the unconstrained string dietary preference.
 
 ## Configuration
 
@@ -271,8 +297,10 @@ and `similarity_top_k` are all hard-coded.
 ## Status
 
 Experimental. Ingestion runs end to end when the models and the database are
-present; the query entry point does not currently import, and the indexing step
-discards most of each recipe. Treat it as a working sketch of a local RAG
+present, the query entry point imports and reads the persisted vectors, and the
+indexing step now embeds ingredients and instructions. The query path still has
+no configured local response or embedding model, and the hard-coded `embed_dim`
+still does not match `bge-m3`. Treat it as a working sketch of a local RAG
 pipeline rather than something to put recipes into and trust.
 
 ## License

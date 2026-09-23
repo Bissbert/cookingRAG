@@ -4,7 +4,14 @@
 [`query_recipes.py`](../query_recipes.py) · 51 lines · 1,683 bytes
 
 The retrieval half of the RAG loop. It is the smaller of the two entry points
-and, as committed, it does not run.
+and, as committed at the time of this pass, it did not run.
+
+> **Status note.** BUG-02, the pre-0.10 `llama_index` import layout, and
+> BUG-03, the index built with no nodes and no vector store, have since been
+> fixed on the default branch in commits `418911ae` and `f23d17df`. The module
+> imports and reads the persisted vectors. BUG-04 is confirmed and still open:
+> no local response or embedding model is configured, so `llama_index` still
+> falls back to OpenAI. See [Bugs found](BUGS-FOUND.md).
 
 ## It fails at import
 
