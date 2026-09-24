@@ -98,10 +98,10 @@ Everything the recipe says is in the embedded text, so a question such as
 embedding. The `vegetarian` half is also a metadata value, but the default
 query path does not filter on metadata unless asked to.
 
-Until commit `13980e08` this function read `instructions` and
+Until commit
+[`13980e08`](https://github.com/Bissbert/cookingRAG/commit/13980e08) this function read `instructions` and
 `Ingredient`-shaped elements, the shape of the older export described in
-[02 — Extraction](02-extraction.md), and embedded only the title and cook time
-([BUG-01](BUGS-FOUND.md#bug-01)).
+[02 — Extraction](02-extraction.md), and embedded only the title and cook time.
 
 ## The embedding model
 

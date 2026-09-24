@@ -13,7 +13,6 @@ describes.
 | 5 | [Query](05-query.md) | [`query_recipes.py`](../query_recipes.py) | The retrieval half, on the same local models as ingestion. |
 | 6 | [Configuration](06-configuration.md) | — | Every environment variable, every hard-coded value. |
 | — | [Measurement](measurement.md) | [`tools/`](../tools), [`tests/`](../tests) | How every number here was produced, in Linux containers, the test suite, and what was not run. |
-| — | [Bugs found](BUGS-FOUND.md) | — | Fifteen entries: ten fixed, two open, three rejected. |
 
 ## Reading order
 

@@ -156,7 +156,7 @@ media/                generated figures
 
 → [Full documentation](docs/README.md) ·
 [how this was measured](docs/measurement.md) ·
-[bugs found](docs/BUGS-FOUND.md)
+[open issues](https://github.com/Bissbert/cookingRAG/issues)
 
 ## What lands in PostgreSQL
 
@@ -180,13 +180,9 @@ with cosine distance — sensible at this scale, but worth knowing.
 
 ## Known limitations
 
-Each defect below is written up in full in
-[docs/BUGS-FOUND.md](docs/BUGS-FOUND.md) — file and line, how to reproduce it,
-and the fix as a diff. An independent adjudication of those fifteen entries
-confirmed twelve and rejected three; all twelve have since been fixed. What is
-left is listed first.
-
-### Still open
+Defects are tracked as
+[GitHub issues](https://github.com/Bissbert/cookingRAG/issues). These are the
+limits of the design and of the one recorded run:
 
 - **At most 10 images per run.** `sample=10` is hard-coded with no CLI flag.
   The order is now the discovered order unless `shuffle=True` is passed.
@@ -205,68 +201,6 @@ left is listed first.
   account for **99.1 %** of all object bytes. Deleting files does not shrink
   history — only a rewrite would. `python3 tools/repo_size.py` shows the
   breakdown.
-
-### Recorded, then rejected on review
-
-- **`initModel()` is an empty function** ([BUG-06](docs/BUGS-FOUND.md#bug-06)).
-  It is a no-op, but ingestion passes its model explicitly and the query entry
-  point never calls it, so no runtime defect follows. Dead scaffolding, not a
-  broken initialization path.
-- **`recipe.dict()` is removed in pydantic 3**
-  ([BUG-10](docs/BUGS-FOUND.md#bug-10)). A future-major removal, not a present
-  failure of the pinned dependency set.
-- **Ingestion is sequential despite the async scaffolding**
-  ([BUG-12](docs/BUGS-FOUND.md#bug-12)). Accurate as a description, but nothing
-  in the contract or in a measurement promises parallel execution, and the
-  proposed change still wraps blocking model calls. An optimization proposal,
-  not a functional bug.
-
-### Fixed on the default branch since this pass
-
-- **The query path had no local model and fell back to OpenAI**
-  ([#5](https://github.com/Bissbert/cookingRAG/issues/5)). It now uses `bge-m3`
-  and `qwq`, as ingestion does. [Details](docs/05-query.md).
-- **`embed_dim=1536` was hard-coded** while the embedding model is `bge-m3`
-  ([#6](https://github.com/Bissbert/cookingRAG/issues/6)). The width now comes
-  from the model: 1024 for `bge-m3`, or `EMBED_DIM`. A table created at 1536
-  has to be dropped and ingested again. [Details](docs/04-storage.md#the-vector-width).
-- **Ingest never created the vector table**
-  ([#7](https://github.com/Bissbert/cookingRAG/issues/7)).
-  `llama-index-vector-stores-postgres` is now pinned to 0.3.2.
-
-- **Ingredients and instructions were never embedded**
-  ([BUG-01](docs/BUGS-FOUND.md#bug-01)). `get_nodes_from_objs()` read fields the
-  `Recipe` does not have, so the stored text was title and cook time only. It
-  now renders the string ingredients and `instructionsAsString`.
-  [Details](docs/03-indexing.md).
-- **`query_recipes.py` did not import**
-  ([BUG-02](docs/BUGS-FOUND.md#bug-02)). It used the pre-0.10 flat
-  `llama_index` layout against the pinned 0.12.2; the imports now match the
-  pinned package layout.
-- **The query index was built with no nodes and no vector store**
-  ([BUG-03](docs/BUGS-FOUND.md#bug-03)). It is now constructed with
-  `VectorStoreIndex.from_vector_store`, so it reads the persisted vectors.
-- **`requirements.txt` did not resolve**
-  ([BUG-05](docs/BUGS-FOUND.md#bug-05)). The `pydantic` pin is now `2.9.2`.
-- **The `shuffle` parameter was declared and never read**
-  ([BUG-07](docs/BUGS-FOUND.md#bug-07)). `random.shuffle` is now called only
-  when `shuffle=True`.
-- **`PG_DB_NAME` was interpolated unquoted** into SQL
-  ([BUG-08](docs/BUGS-FOUND.md#bug-08)). The existence check binds the name as
-  a parameter and creation uses `psycopg2.sql.Identifier`.
-- **Both prompts were printed on import**
-  ([BUG-11](docs/BUGS-FOUND.md#bug-11)). They are now `logging.debug` calls.
-- **One failure lost the whole run**
-  ([BUG-13](docs/BUGS-FOUND.md#bug-13)). Batch extraction now catches failures
-  per image, logs them, and returns the successful results. A durable
-  checkpoint was deliberately not invented.
-- **The vision-model retry loop caught only `ResponseError`**
-  ([BUG-14](docs/BUGS-FOUND.md#bug-14)). Both retry loops now cover transport
-  failures, timeouts and connection failures, and no longer retry validation or
-  programming errors.
-- **The `Recipe` docstring contradicted its own fields**
-  ([BUG-15](docs/BUGS-FOUND.md#bug-15)). It now documents the `undefined` type
-  option and the unconstrained string dietary preference.
 
 ## Configuration
 
