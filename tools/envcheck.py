@@ -29,9 +29,9 @@ PG_PORT = int(os.environ.get("PG_PORT", "5432"))
 
 # Model names as hard-coded in the source, with the file that pins each one.
 REQUIRED_MODELS = [
-    ("llama3.2-vision:90b", "util/ingestion_model_interaction.py:14"),
-    ("qwq", "util/ingestion_model_interaction.py:17"),
-    ("bge-m3", "util/embedding_util.py:10"),
+    ("llama3.2-vision:90b", "util/ingestion_model_interaction.py:23"),
+    ("qwq", "util/ingestion_model_interaction.py:26"),
+    ("bge-m3", "util/embedding_util.py:12"),
 ]
 
 

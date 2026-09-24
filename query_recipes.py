@@ -1,31 +1,21 @@
 #!python
 
-import os
 import argparse
-from llama_index.core import StorageContext, VectorStoreIndex
-from llama_index.vector_stores.postgres import PGVectorStore
+from llama_index.core import Settings, VectorStoreIndex
+from util.embedding_util import initEmbeddingModel
+from util.ingestion_model_interaction import language_model
+from util.database_conection import setup_vector_store
 
-# === Configuration ===
+def init_query_models():
+    """
+    Configure the models used to answer a query.
 
-# Database connection details
-PG_HOST = os.environ.get('PG_HOST', 'localhost')
-PG_PORT = os.environ.get('PG_PORT', '5432')
-PG_USER = os.environ.get('PG_USER', 'postgres')
-PG_PASSWORD = os.environ.get('PG_PASSWORD', 'your_database_password')  # Replace with your password or use environment variable
-PG_DB_NAME = os.environ.get('PG_DB_NAME', 'recipe_db')
-
-def setup_vector_store():
-    vector_store = PGVectorStore.from_params(
-        database=PG_DB_NAME,
-        host=PG_HOST,
-        port=PG_PORT,
-        user=PG_USER,
-        password=PG_PASSWORD,
-        table_name="recipes",
-        embed_dim=1536,  # Adjust based on your embedding model
-    )
-    storage_context = StorageContext.from_defaults(vector_store=vector_store)
-    return storage_context
+    The question is embedded with the same model the recipes were ingested
+    with, and the answer is written by the same local LLM that structures the
+    recipes during ingestion, so no query falls back to a hosted default.
+    """
+    initEmbeddingModel()
+    Settings.llm = language_model
 
 def search_recipes(query, storage_context):
     # Create a query engine
@@ -46,6 +36,7 @@ def main():
 
     search_query = ' '.join(args.query)
 
+    init_query_models()
     storage_context = setup_vector_store()
     search_recipes(search_query, storage_context)
 

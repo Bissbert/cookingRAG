@@ -1,7 +1,7 @@
 # 1 — Ingestion: `ingest_recipes.py`
 
 [← back to the overview](../README.md) · source:
-[`ingest_recipes.py`](../ingest_recipes.py) · 126 lines · 3,843 bytes
+[`ingest_recipes.py`](../ingest_recipes.py) · 127 lines · 3,863 bytes
 
 The only entry point that runs. It takes one argument — a directory of images —
 and walks it through the whole pipeline: pick files, extract recipes, dump a
@@ -21,10 +21,10 @@ flowchart TD
     C --> D["initEmbeddingModel<br/>Settings.embed_model = bge-m3"]
     D --> E["setup_database<br/>CREATE DATABASE recipe_db if absent"]
     E --> F["setup_vector_store<br/>→ StorageContext"]
-    F --> G["get_image_files<br/>glob jpg/jpeg/png, shuffle, take 10"]
+    F --> G["get_image_files<br/>glob jpg/jpeg/png, take 10"]
     G --> H{"any files?"}
     H -- no --> Y["print 'No image files found'<br/>return"]
-    H -- yes --> I["aprocess_image_files<br/>one image at a time"]
+    H -- yes --> I["aprocess_image_files<br/>one image at a time,<br/>failures logged and skipped"]
     I --> J["save_data_objects_to_json<br/>recipeExport-UUID.json in CWD"]
     J --> K["get_nodes_from_objs<br/>Recipe → TextNode"]
     K --> L["print first 5 nodes"]
@@ -48,14 +48,14 @@ is the point.
 |---|---|
 | Extensions | `*.jpg`, `*.jpeg`, `*.png` only. Case-sensitive globs, so `.JPG` is skipped. |
 | Recursion | None. `Path.glob` without `**`, so subdirectories are ignored. |
-| Ordering | `random.shuffle()` is called **unconditionally**. |
+| Ordering | The order the globs return: all `.jpg`, then `.jpeg`, then `.png`, each in directory order, which is not sorted. |
 | Sampling | `sample` defaults to `10`, so at most 10 images per run. |
-| `shuffle` parameter | Declared, defaulted to `False`, and **never read**. Shuffling happens regardless. |
+| `shuffle` parameter | Defaults to `False`; `random.shuffle()` runs only when it is `True`. |
 
 Both defaults are baked in — `process_recipe_images()` calls
 `get_image_files(folder_path)` with no overrides, and there is no CLI flag for
-either. Pointing the script at a folder of 50 photos processes a random 10 of
-them, and a different 10 on the next run.
+either. Pointing the script at a folder of 50 photos processes the first 10 the
+filesystem lists, and the other 40 are never reached.
 
 ## The JSON export
 
@@ -104,12 +104,15 @@ sequentially, and each one costs two full model round-trips.
 
 ## Failure behaviour
 
-There is no `try` around the per-image work. `pydantic_llm()` re-raises
-after its last retry, that propagates out through `aprocess_image_files`,
-and the whole run dies — including the images already extracted, because
-the JSON export and the database write both happen only after *every*
-image has been processed. One bad image at position 9 of 10 loses the
-other nine.
+`aprocess_image_files` wraps each image in its own `try`. When
+`pydantic_llm()` gives up on an image, the exception is logged with its
+traceback, the file is added to a failed list, and the loop moves on. At the
+end a warning names every file that failed, and the successful results go on
+to the JSON export and the database write.
+
+There is no checkpoint. The export and the database write still happen only
+after every image has been attempted, so killing the process part-way loses
+the whole run, and re-running processes every image again.
 
 ## Next
 

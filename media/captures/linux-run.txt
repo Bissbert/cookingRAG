@@ -1,0 +1,173 @@
+
+=== environment
+Linux 6.5.11-linuxkit aarch64
+Python 3.12.14
+pip 25.0.1
+
+=== pip install -r requirements.txt
+exit=0
+Name: pydantic
+Version: 2.9.2
+Name: llama-index-core
+Version: 0.12.2
+
+=== tools/envcheck.py
+| Component                   | Status |
+| --------------------------- | --- |
+| python                      | OK   3.12.14 |
+| ollama daemon               | FAIL unreachable at http://localhost:11434 (<urlopen error [Errno 99] Cannot assign requested address>) |
+|   model llama3.2-vision:90b | FAIL unknown - daemon down (util/ingestion_model_interaction.py:23) |
+|   model qwq                 | FAIL unknown - daemon down (util/ingestion_model_interaction.py:26) |
+|   model bge-m3              | FAIL unknown - daemon down (util/embedding_util.py:12) |
+| postgres tcp                | OK   cookingrag-db-18335:5432 open |
+| psycopg2                    | OK   importable |
+| llama_index.core            | OK   0.12.2 |
+
+Cannot run end to end. Missing: ollama daemon, model llama3.2-vision:90b, model qwq, model bge-m3
+
+=== tools/codestats.py
+| File                                  | Lines | Bytes |
+| ------------------------------------- | -----: | ----: |
+| `ingest_recipes.py`                   |   127 |  3,863 |
+| `query_recipes.py`                    |    44 |  1,448 |
+| `util/recipe.py`                      |    32 |  1,498 |
+| `util/json_util.py`                   |    15 |    411 |
+| `util/embedding_util.py`              |    82 |  2,777 |
+| `util/database_conection.py`          |    67 |  2,366 |
+| `util/ingestion_model_interaction.py` |   164 |  5,718 |
+| **total**                             | **531** | **18,081** |
+
+=== entry points: --help
+ingest_recipes.py --help  exit=0
+query_recipes.py --help   exit=0
+
+=== tools/show_schema.py
+Parameters taken from util/database_conection.py:
+    table_name = 'recipes'
+    embed_dim  = 1024  (embedding_dim() for bge-m3)
+    schema     = 'public'  (from_params default)
+    database   = 'recipe_db'  (PG_DB_NAME)
+
+Resulting table: public.data_recipes
+
+
+CREATE TABLE public.data_recipes (
+	id BIGSERIAL NOT NULL, 
+	text VARCHAR NOT NULL, 
+	metadata_ JSON, 
+	node_id VARCHAR, 
+	embedding VECTOR(1024), 
+	PRIMARY KEY (id)
+)
+
+
+Plus, issued separately by PGVectorStore before the table is made:
+
+    CREATE EXTENSION IF NOT EXISTS vector;
+
+No HNSW or IVFFlat index is created: hnsw_kwargs is not passed, so
+similarity search runs as a sequential scan with cosine distance.
+
+=== tools/node_preview.py
+Input Recipe
+------------
+  title                  'Pariser Zwiebelsuppe'
+  ingredients            ['375 g Zwiebeln', '50 g Butter', '40 g Mehl', '1 l Bruehe']
+  instructionsAsString   '1. Zwiebeln in feine Scheiben hobeln. 2. In Butter glasig duensten. 3. Mehl aufstreuen und aufkochen lassen.'
+  cook_time              '45 minutes'
+  type                   'cooking'
+  dietary_preference     'vegetarian'
+
+Node text handed to the embedding model
+---------------------------------------
+'Title: Pariser Zwiebelsuppe\n\nCook Time: 45 minutes\nIngredients:\n- 375 g Zwiebeln\n- 50 g Butter\n- 40 g Mehl\n- 1 l Bruehe\n\nInstructions:\n1. Zwiebeln in feine Scheiben hobeln. 2. In Butter glasig duensten. 3. Mehl aufstreuen und aufkochen lassen.\n'
+
+Rendered:
+  | Title: Pariser Zwiebelsuppe
+  | 
+  | Cook Time: 45 minutes
+  | Ingredients:
+  | - 375 g Zwiebeln
+  | - 50 g Butter
+  | - 40 g Mehl
+  | - 1 l Bruehe
+  | 
+  | Instructions:
+  | 1. Zwiebeln in feine Scheiben hobeln. 2. In Butter glasig duensten. 3. Mehl aufstreuen und aufkochen lassen.
+
+Node metadata
+-------------
+  {'type': 'cooking', 'dietary_preference': 'vegetarian'}
+
+Ingredient names reached the node text: True
+Instruction text reached the node text: True
+
+Characters in: 172 (title + ingredients + instructions)
+Characters out: 244
+
+=== tools/inspect_export.py
+== recipeExport-3889e5c2-fd85-4e50-8a61-024a12744127.json
+Records: 5
+Keys present across all records: `cook_time`, `dietary_preference`, `ingredients`, `instructions`, `title`, `type`
+
+| # | title | ingredients | instruction steps | cook_time | type | dietary_preference |
+| ---: | --- | ---: | ---: | --- | --- | --- |
+| 1 | Mehlsuppe mit Brötchen und Eier | 10 | 9 | 20-30 minutes | baking | vegetarian |
+| 2 | Spaetzle im Brei | 5 | 5 | 20 minutes | baking | vegetarian |
+| 3 | Spaetzle im Brei | 4 | 5 | (empty) | baking | vegetarian |
+| 4 | Spaetzle im Brei | 1 | 1 | 30 minutes | cooking | vegetarian |
+| 5 | Spaetzle im Brei | 4 | 7 | 15-20 minutes | cooking | vegetarian |
+
+title 'Mehlsuppe mit Brötchen und Eier'        appears 1 time(s)
+title 'Spaetzle im Brei'                       appears 4 time(s)
+
+Validated against util/recipe.py Recipe:
+  record 1: FAILS - instructionsAsString: Field required
+  record 2: FAILS - instructionsAsString: Field required
+  record 3: FAILS - instructionsAsString: Field required
+  record 4: FAILS - instructionsAsString: Field required
+  record 5: FAILS - instructionsAsString: Field required
+
+=== tools/repo_size.py
+Blobs in the full object graph (all refs, all history)
+
+| Top-level path | Blobs | Uncompressed bytes | Share |
+| --- | ---: | ---: | ---: |
+| `venv` | 14,948 | 253,436,221 | 99.1 % |
+| `testRecipes` | 5 | 1,548,272 | 0.6 % |
+| `media` | 3 | 248,519 | 0.1 % |
+| `docs` | 26 | 207,497 | 0.1 % |
+| `README.md` | 11 | 125,838 | 0.0 % |
+| `util` | 21 | 51,643 | 0.0 % |
+| `tools` | 9 | 23,243 | 0.0 % |
+| `ingest_recipes.py` | 5 | 16,697 | 0.0 % |
+| `tests` | 5 | 12,690 | 0.0 % |
+| `query_recipes.py` | 4 | 6,568 | 0.0 % |
+| `.DS_Store` | 1 | 6,148 | 0.0 % |
+| `.gitignore` | 2 | 4,011 | 0.0 % |
+| **total** | **15,045** | **255,694,004** | |
+
+Packed size reported by git:
+
+    count: 39
+    in-pack: 16965
+    size-pack: 78.31 MiB
+
+Commits touching `venv/`:
+    7e9c095f Remove venv folder from repository
+    d3ea1ea4 Initial commit
+
+=== setup_database() twice, with a database name that needs quoting
+Database 'recipe-db; x' created.
+Database 'recipe-db; x' already exists.
+exit=0
+
+=== query_recipes.py against an empty store, no Ollama daemon, no OpenAI key
+exit=1
+last line: httpx.ConnectError: [Errno 99] Cannot assign requested address
+lines mentioning OpenAI: 0
+
+=== tools/make_media.py reproduces media/corpus.jpg
+Pillow 12.3.0 size (1392, 405) committed (1392, 405)
+max per-channel pixel difference: 0
+byte-identical

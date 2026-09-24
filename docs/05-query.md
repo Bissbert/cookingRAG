@@ -1,56 +1,28 @@
 # 5 — Query: `query_recipes.py`
 
 [← back to the overview](../README.md) · source:
-[`query_recipes.py`](../query_recipes.py) · 51 lines · 1,683 bytes
+[`query_recipes.py`](../query_recipes.py) · 44 lines · 1,448 bytes
 
-The retrieval half of the RAG loop. It is the smaller of the two entry points
-and, as committed at the time of this pass, it did not run.
+The retrieval half of the RAG loop, and the smaller of the two entry points.
+It embeds the question with the same local model the recipes were ingested
+with (`bge-m3`), reads the stored vectors, and writes the answer with the same
+local LLM that structures recipes during ingestion (`qwq`). No OpenAI key is
+needed or used.
 
-> **Status note.** BUG-02, the pre-0.10 `llama_index` import layout, and
-> BUG-03, the index built with no nodes and no vector store, have since been
-> fixed on the default branch in commits `418911ae` and `f23d17df`. The module
-> imports and reads the persisted vectors. BUG-04 is confirmed and still open:
-> no local response or embedding model is configured, so `llama_index` still
-> falls back to OpenAI. See [Bugs found](BUGS-FOUND.md).
-
-## It fails at import
-
-```sh
-$ python query_recipes.py --help
-Traceback (most recent call last):
-  File "query_recipes.py", line 5, in <module>
-    from llama_index import StorageContext, VectorStoreIndex
-ImportError: cannot import name 'StorageContext' from 'llama_index'
-```
-
-Both of its `llama_index` imports use the pre-0.10 flat layout. `llama_index`
-0.12.2 — the version `requirements.txt` pins — moved everything into
-namespaced subpackages:
-
-| Line | In `query_recipes.py` | Where it lives in 0.12.2 |
-|---|---|---|
-| 5 | `from llama_index import StorageContext, VectorStoreIndex` | `llama_index.core` |
-| 6 | `from llama_index.vector_stores import PGVectorStore` | `llama_index.vector_stores.postgres` |
-
-`ingest_recipes.py` and all five `util/` modules already use the new paths and
-import cleanly; only this file was left behind. The failure is at module scope,
-so it happens before `argparse` runs — even `--help` cannot work.
-
-## What it would do
-
-Reading past the import error, the intended flow is short:
+## The flow
 
 ```mermaid
 sequenceDiagram
     participant U as user
     participant Q as query_recipes.py
-    participant E as "embedding model"
+    participant E as "bge-m3<br/>(Ollama)"
     participant P as "pgvector<br/>public.data_recipes"
-    participant L as "response LLM"
+    participant L as "qwq<br/>(Ollama)"
 
-    U->>Q: python query_recipes.py "something with lentils"
+    U->>Q: python query_recipes.py something with lentils
+    Q->>Q: init_query_models() → bge-m3 embedder, qwq LLM
     Q->>Q: setup_vector_store() → StorageContext
-    Q->>Q: VectorStoreIndex(storage_context=...)
+    Q->>Q: VectorStoreIndex.from_vector_store(...)
     Q->>Q: as_query_engine(similarity_top_k=5)
     Q->>E: embed the question
     E-->>Q: query vector
@@ -63,61 +35,63 @@ sequenceDiagram
 
 `as_query_engine()` is the retrieve-**and**-generate path: it feeds the
 retrieved nodes to an LLM and prints prose, rather than listing the matching
-recipes. That distinction matters for the next two problems.
+recipes.
 
-## Three further problems behind the import error
+## The models
 
-Fixing the imports alone would not make this work.
-
-**1. The index is constructed without nodes.**
+`init_query_models()` runs before anything else in `main()`:
 
 ```python
-index = VectorStoreIndex(storage_context=storage_context)
+def init_query_models():
+    initEmbeddingModel()
+    Settings.llm = language_model
 ```
 
-`VectorStoreIndex(...)` is the constructor for *building* an index from nodes.
-Loading one that already exists in a vector store is
-`VectorStoreIndex.from_vector_store(vector_store)`. As written, this asks for an
-index over an empty node list rather than over the stored rows.
+- `initEmbeddingModel()` sets `Settings.embed_model` to the same
+  `OllamaEmbedding` object ingestion uses (`util/embedding_util.py`), so the
+  question and the stored recipes are embedded by one model at one width.
+- `language_model` is the `Ollama(model="qwq")` object from
+  `util/ingestion_model_interaction.py`, so the query path needs no model that
+  ingestion does not already need.
+- The vector store comes from the shared `setup_vector_store()` in
+  `util/database_conection.py`. `query_recipes.py` no longer has its own copy
+  of the connection settings or of the vector width.
 
-**2. No LLM is configured for the generation step.**
-
-`as_query_engine()` needs a response LLM. `query_recipes.py` never sets
-`Settings.llm`, never imports `Ollama`, and does not import
-`util.ingestion_model_interaction` either. `llama_index`'s default is OpenAI, so
-the query path would reach for `OPENAI_API_KEY` — directly contradicting the
-README's "no OpenAI key required" claim. `initModel()` in
-`util/ingestion_model_interaction.py`, which is the one place that would have
-set a local LLM, has its body commented out (see
-[02 — Extraction](02-extraction.md)).
-
-**3. No embedding model is configured either.**
-
-`initEmbeddingModel()` is never called here, so `Settings.embed_model` keeps its
-default. The question would be embedded with a different model from the one that
-embedded the corpus — and at a different width.
-
-Ingestion reaches these settings through `ingest_recipes.py`, which calls
-`initEmbeddingModel()` during start-up. Nothing on the query side does.
+Before [#5](https://github.com/Bissbert/cookingRAG/issues/5) neither model
+was set, and `llama_index` fell back to OpenAI: without an `OPENAI_API_KEY` the
+script exited 1 with `No API key found for OpenAI.`
 
 ```mermaid
 flowchart TD
-    A["query_recipes.py"] --> B["import llama_index"]
-    B --> C["ImportError<br/><i>flat 0.9 layout</i>"]
-    C -.->|"if fixed"| D["VectorStoreIndex(storage_context=...)<br/><i>no nodes, not from_vector_store</i>"]
-    D -.->|"if fixed"| E["as_query_engine()<br/><i>Settings.llm unset → OpenAI default</i>"]
-    E -.->|"if fixed"| F["Settings.embed_model unset<br/><i>wrong model for the corpus</i>"]
-    F -.->|"if fixed"| G["retrieval over title + cook_time only<br/><i>see doc 03</i>"]
+    A["query_recipes.py"] --> M["init_query_models()"]
+    M --> F["Settings.embed_model<br/><i>bge-m3, shared with ingestion</i>"]
+    M --> E["Settings.llm<br/><i>qwq, shared with ingestion</i>"]
+    A --> S["setup_vector_store()<br/><i>util/database_conection.py</i>"]
+    S --> D["VectorStoreIndex.from_vector_store<br/><i>reads public.data_recipes</i>"]
 
-    style C fill:#da3633,stroke:#f85149,color:#fff
-    style D fill:#da3633,stroke:#f85149,color:#fff
-    style E fill:#9e6a03,stroke:#d29922,color:#fff
-    style F fill:#9e6a03,stroke:#d29922,color:#fff
-    style G fill:#9e6a03,stroke:#d29922,color:#fff
+    style F fill:#238636,stroke:#3fb950,color:#fff
+    style E fill:#238636,stroke:#3fb950,color:#fff
+    style D fill:#238636,stroke:#3fb950,color:#fff
 ```
 
-Even with all four resolved, retrieval would still match only on title and cook
-time, because that is all the stored `text` column contains.
+Run in a Linux container against a pgvector server, with no Ollama daemon and
+no `OPENAI_API_KEY`
+([`media/captures/linux-run.txt`](../media/captures/linux-run.txt)), the
+script now stops where it tries to reach Ollama, exit status 1, and nothing in
+its output mentions OpenAI:
+
+```
+last line: httpx.ConnectError: [Errno 99] Cannot assign requested address
+lines mentioning OpenAI: 0
+```
+
+The test suite covers the successful path: `tests/test_pgvector.py` ingests two
+recipes into a fresh pgvector database with the Ollama models faked, then runs
+`query_recipes.main()` and checks that the question was embedded with `bge-m3`
+and answered by `qwq` (see [Measurement](measurement.md#test-suite)).
+
+Until commits `418911ae` and `f23d17df` the module did not import at all, and
+its index was built with no nodes instead of from the vector store.
 
 ## The command line
 
@@ -127,14 +101,8 @@ parser.add_argument('query', type=str, nargs='+',
 ```
 
 `nargs='+'` makes the query **required**, and the words are rejoined with
-spaces. The invocation in the current README —
-
-```sh
-python query_recipes.py
-```
-
-— would therefore fail with `error: the following arguments are required:
-query` even if the imports worked. The correct shape is:
+spaces. Run with no words, it exits with `error: the following arguments are
+required: query`. The correct shape is:
 
 ```sh
 python query_recipes.py something vegetarian with lentils

@@ -3,6 +3,7 @@ import psycopg2
 from psycopg2 import sql
 from llama_index.vector_stores.postgres import PGVectorStore
 from llama_index.core import StorageContext
+from util.embedding_util import embedding_dim
 
 # Database connection details
 PG_HOST = os.environ.get('PG_HOST', 'localhost')
@@ -60,7 +61,7 @@ def setup_vector_store():
         user=PG_USER,
         password=PG_PASSWORD,
         table_name="recipes",
-        embed_dim=1536,  # Adjust based on your embedding model
+        embed_dim=embedding_dim(),
     )
     storage_context = StorageContext.from_defaults(vector_store=vector_store)
     return storage_context

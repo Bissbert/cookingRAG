@@ -1,15 +1,8 @@
 # 4 — Storage: `util/database_conection.py`
 
 [← back to the overview](../README.md) · source:
-[`util/database_conection.py`](../util/database_conection.py) · 62 lines ·
-2,254 bytes
-
-> **Status note.** This write-up describes the code as it stood during the
-> documentation pass. BUG-08 — the database name interpolated unquoted into SQL
-> — has since been fixed on the default branch in commit `6ab82c23`. BUG-09,
-> the hard-coded `embed_dim=1536` against `bge-m3`, is confirmed and still
-> open: changing the width needs a reindex plan for the existing vector column.
-> See [Bugs found](BUGS-FOUND.md).
+[`util/database_conection.py`](../util/database_conection.py) · 67 lines ·
+2,366 bytes
 
 Two functions. `setup_database()` makes sure the target database exists;
 `setup_vector_store()` builds the `PGVectorStore` and wraps it in a
@@ -27,7 +20,7 @@ flowchart TD
     D --> F["conn.close()"]
     E --> F
     F --> G["setup_vector_store()"]
-    G --> H["PGVectorStore.from_params<br/>database=<b>recipe_db</b>, table_name='recipes'<br/>embed_dim=1536"]
+    G --> H["PGVectorStore.from_params<br/>database=<b>recipe_db</b>, table_name='recipes'<br/>embed_dim=embedding_dim() → 1024"]
     H --> I["CREATE EXTENSION IF NOT EXISTS vector"]
     I --> J["CREATE TABLE public.data_recipes"]
     J --> K["StorageContext"]
@@ -42,11 +35,17 @@ regardless of `PG_DB_NAME`. The second, made by `llama_index`, goes to
 `PG_DB_NAME` itself. Creating a database requires a role with `CREATEDB`, which
 is one reason the default `PG_USER=postgres` is baked in.
 
-`setup_database()` interpolates `db_name` straight into both statements with an
-f-string, including into `CREATE DATABASE {db_name}`. `PG_DB_NAME` comes from
-the environment, so it is not attacker-controlled in any normal deployment, but
-it is also not quoted or validated — a database name with a hyphen in it will
-produce a syntax error rather than a quoted identifier.
+`setup_database()` binds `db_name` as a query parameter in the existence check
+and builds `CREATE DATABASE` with `psycopg2.sql.Identifier`, so the name is
+quoted as an identifier rather than pasted into the SQL. Against a pgvector
+container, with a name that would break unquoted SQL
+([`media/captures/linux-run.txt`](../media/captures/linux-run.txt)):
+
+```
+$ PG_DB_NAME="recipe-db; x" python3 -c "from util.database_conection import setup_database; setup_database(); setup_database()"
+Database 'recipe-db; x' created.
+Database 'recipe-db; x' already exists.
+```
 
 ## The table
 
@@ -61,7 +60,7 @@ CREATE TABLE public.data_recipes (
 	text VARCHAR NOT NULL,
 	metadata_ JSON,
 	node_id VARCHAR,
-	embedding VECTOR(1536),
+	embedding VECTOR(1024),
 	PRIMARY KEY (id)
 )
 ```
@@ -69,10 +68,10 @@ CREATE TABLE public.data_recipes (
 | Column | Type | Holds |
 |---|---|---|
 | `id` | `BIGSERIAL` | surrogate key, assigned by PostgreSQL |
-| `text` | `VARCHAR` | the flattened node text from [03](03-indexing.md) — in practice title and cook time only |
+| `text` | `VARCHAR` | the flattened node text from [03](03-indexing.md): title, cook time, ingredients and instructions |
 | `metadata_` | `JSON` | `{"type": ..., "dietary_preference": ...}` plus `llama_index` bookkeeping |
 | `node_id` | `VARCHAR` | the `TextNode` UUID |
-| `embedding` | `VECTOR(1536)` | the bge-m3 vector |
+| `embedding` | `VECTOR(1024)` | the bge-m3 vector |
 
 One row per recipe. There is no chunking anywhere in this project: a recipe is
 never split, so node count equals recipe count equals, at most, ten per run.
@@ -92,24 +91,41 @@ approximate indexes cost recall and only pay off in the thousands of rows. It is
 worth stating explicitly because "vector store" tends to imply an index is
 present.
 
-## The `embed_dim = 1536` question
+## The vector width
 
-`embed_dim=1536` is hard-coded, with the comment `# Adjust based on your
-embedding model`. 1536 is the width of OpenAI's `text-embedding-ada-002` and is
-the `PGVectorStore` default; it is what the column is declared as, above.
+The column width comes from the embedding model, not from a literal.
+`util/embedding_util.py` holds the model name and its width together:
 
-The configured embedding model is not an OpenAI model — it is `bge-m3`, set in
-`util/embedding_util.py`. **The width bge-m3 actually returns was not measured
-during this pass**, because the model is not available on the machine these docs
-were written on (see [measurement](measurement.md)). What can be stated from the
-code alone is that the two numbers are set in two different files by two
-different mechanisms, and nothing reconciles them: the column width comes from a
-literal in `util/database_conection.py`, and the vector width comes from
-whichever model name sits in `util/embedding_util.py`.
+```python
+EMBED_MODEL = os.environ.get('EMBED_MODEL', 'bge-m3')
+KNOWN_EMBED_DIMS = {
+    'bge-m3': 1024,
+}
+```
 
-If they disagree, pgvector rejects the insert — `expected 1536 dimensions, not
-N` — so this would surface loudly on the first write rather than corrupting
-anything silently. To check on a machine that has the model:
+`embedding_dim()` returns, in order:
+
+1. `EMBED_DIM` from the environment, if it is set;
+2. the known width of `EMBED_MODEL` (a tag such as `bge-m3:latest` counts as
+   `bge-m3`), with no model call;
+3. otherwise, the length of one probe embedding from the configured model.
+
+`setup_vector_store()` passes that to `PGVectorStore.from_params(embed_dim=...)`,
+and it is the only store setup in the project: the query path calls the same
+function (see [Duplicate definition](#duplicate-definition)).
+
+Until [#6](https://github.com/Bissbert/cookingRAG/issues/6) the width was
+hard-coded to 1536, the `PGVectorStore` default and OpenAI's width, in two
+files. `bge-m3` returns 1024-wide vectors, so pgvector would have rejected the
+first insert with `expected 1536 dimensions, not 1024`.
+
+**Existing databases.** A `data_recipes` table created before this change
+still has a `VECTOR(1536)` column, and pgvector cannot change a column's width
+in place. Drop the table (or the database) and ingest again.
+
+The width `bge-m3` returns on a live Ollama was not measured here: the
+containers used for [measurement](measurement.md) have no Ollama models. To
+check on a machine that has the model:
 
 ```sh
 ollama pull bge-m3
@@ -120,7 +136,16 @@ print(len(e.get_text_embedding("test")))
 PY
 ```
 
-Whatever that prints is the number `embed_dim` needs to be.
+## The table is created on a new database
+
+`PGVectorStore` creates the `vector` extension and the table the first time the
+store is used. The previously pinned `llama-index-vector-stores-postgres==0.3.1`
+skipped both whenever the schema already existed. The schema is `public`, which
+always exists, so ingest into a new database failed on the first insert with
+`relation "public.data_recipes" does not exist`
+([#7](https://github.com/Bissbert/cookingRAG/issues/7)). The pin is now
+`0.3.2`, which creates the schema, extension and table independently.
+`tests/test_pgvector.py` checks this against a real pgvector server.
 
 ## Configuration
 
@@ -144,14 +169,11 @@ the application.
 
 ## Duplicate definition
 
-`query_recipes.py` declares its own copy of all five constants and its own
-`setup_vector_store()`, rather than importing this module. The five constant
-lines are byte-identical between the two files, and so is the
-`PGVectorStore.from_params()` block apart from the name of the variable holding
-the database — `diff` of those ranges is empty. Nothing has diverged yet; the
-cost is that any change has to be made in both places. What the query-side copy
-does lack is `setup_database()`, and its imports use paths that no longer
-exist. See [05 — Query](05-query.md).
+`query_recipes.py` used to declare its own copy of all five constants and its
+own `setup_vector_store()`, with a second hard-coded width. It now imports
+`setup_vector_store()` from this module, so there is one definition. It still
+does not call `setup_database()`; it expects the database to exist already.
+See [05 — Query](05-query.md).
 
 The filename is spelled `database_conection.py` (one `n`).
 

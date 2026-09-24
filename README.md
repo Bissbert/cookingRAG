@@ -18,7 +18,7 @@ was repaired, and are worth reading before you try to use it.
 
 ```mermaid
 flowchart TD
-    IMG["recipe photos<br/>jpg · jpeg · png"] --> SEL["get_image_files<br/><i>shuffle, take 10</i>"]
+    IMG["recipe photos<br/>jpg · jpeg · png"] --> SEL["get_image_files<br/><i>first 10 found</i>"]
     SEL --> RD["SimpleDirectoryReader<br/>→ ImageDocument"]
     RD --> VIS["<b>llama3.2-vision:90b</b><br/>photo → free-text recipe<br/><i>translate, infer diet</i>"]
     VIS --> STR["<b>qwq</b> + PydanticOutputParser<br/>free text → Recipe object"]
@@ -37,20 +37,19 @@ flowchart TD
     style EMB fill:#1f6feb,stroke:#58a6ff,color:#fff
     style QEMB fill:#1f6feb,stroke:#58a6ff,color:#fff
     style PG fill:#238636,stroke:#3fb950,color:#fff
-    style NODE fill:#da3633,stroke:#f85149,color:#fff
+    style NODE fill:#238636,stroke:#3fb950,color:#fff
     style GEN fill:#9e6a03,stroke:#d29922,color:#fff
 ```
 
-Three models, one database, no chunking — a recipe is one row. Red marks the
-step that loses data ([why](docs/03-indexing.md)); amber marks the step with no
-model configured ([why](docs/05-query.md)).
+Three models, one database, no chunking — a recipe is one row. Amber marks the
+step with no model configured ([why](docs/05-query.md)).
 
 ## Quick start
 
-**This quick start has not been run end to end.** No machine available while
-writing it had the models and a pgvector server at the same time; the commands
-below are derived from the source, and the two places where the previous README
-did not match the code are corrected. See
+**This quick start has not been run end to end with the models.** In a Linux
+container against a pgvector server, `pip install -r requirements.txt` succeeds,
+both entry points start, and the database is created; the model steps were not
+run because the containers have no Ollama models. See
 [docs/measurement.md](docs/measurement.md).
 
 ```sh
@@ -81,26 +80,15 @@ Two corrections to the previous instructions:
   (`nargs='+'`). `python query_recipes.py` with no arguments is an argparse
   error.
 
-At the time of this pass `pip install -r requirements.txt` failed as committed:
-
-```
-ERROR: Cannot install -r requirements.txt (line 8) and pydantic==1.10.17
-because these package versions have conflicting dependencies.
-    The user requested pydantic==1.10.17
-    llama-index-core 0.12.2 depends on pydantic<2.10.0 and >=2.7.0
-ERROR: ResolutionImpossible
-```
-
-The pin has since been changed to `pydantic==2.9.2`, which satisfies
-`llama-index-core` 0.12.2. A full install was not run to confirm the whole set
-resolves.
+No OpenAI key is needed: `query_recipes.py` embeds the question with `bge-m3`
+and answers with `qwq`, the same models ingestion uses.
 
 ## Requirements
 
 | | Needed | Notes |
 |---|---|---|
-| Python | 3.11 tested | The conflicting pydantic pin has been corrected to `2.9.2`. |
-| Ollama | daemon on `localhost:11434` | Hard-coded; `OLLAMA_HOST` is not honoured. |
+| Python | 3.12 tested | `requirements.txt` installs cleanly in `python:3.12-slim-bookworm`. |
+| Ollama | daemon on `localhost:11434` | The embedder reads `OLLAMA_BASE_URL`; the vision and chat models are hard-coded to the default. `OLLAMA_HOST` is not honoured. |
 | `llama3.2-vision:90b` | image → text | ~55 GB. `:11b` is a one-line substitution, unevaluated here. |
 | `qwq` | text → structured `Recipe` | |
 | `bge-m3` | embeddings | Not mentioned in the previous README. |
@@ -149,24 +137,26 @@ util/                 the five modules the pipeline is built from
 testRecipes/          five real recipe photographs
 recipeExport-*.json   output of one real ingest run, committed
 docs/                 a write-up per pipeline stage, plus methodology
-tools/                the scripts that produced every number in the docs
+tools/                the scripts that produced every number in the docs,
+                      and linux-run.sh, which runs them all in containers
+tests/                pytest suite; sh tests/docker.sh runs it in containers
 media/                generated figures
 ```
 
 | File | Lines | Bytes |
 | --- | ---: | ---: |
-| `ingest_recipes.py` | 126 | 3,843 |
-| `query_recipes.py` | 51 | 1,683 |
-| `util/recipe.py` | 31 | 1,567 |
+| `ingest_recipes.py` | 127 | 3,863 |
+| `query_recipes.py` | 44 | 1,448 |
+| `util/recipe.py` | 32 | 1,498 |
 | `util/json_util.py` | 15 | 411 |
-| `util/embedding_util.py` | 55 | 1,842 |
-| `util/database_conection.py` | 62 | 2,254 |
-| `util/ingestion_model_interaction.py` | 140 | 5,100 |
-| **total** | **480** | **16,700** |
+| `util/embedding_util.py` | 82 | 2,777 |
+| `util/database_conection.py` | 67 | 2,366 |
+| `util/ingestion_model_interaction.py` | 164 | 5,718 |
+| **total** | **531** | **18,081** |
 
 → [Full documentation](docs/README.md) ·
 [how this was measured](docs/measurement.md) ·
-[bugs found](docs/BUGS-FOUND.md)
+[open issues](https://github.com/Bissbert/cookingRAG/issues)
 
 ## What lands in PostgreSQL
 
@@ -179,7 +169,7 @@ CREATE TABLE public.data_recipes (
 	text VARCHAR NOT NULL,
 	metadata_ JSON,
 	node_id VARCHAR,
-	embedding VECTOR(1536),
+	embedding VECTOR(1024),
 	PRIMARY KEY (id)
 )
 ```
@@ -190,26 +180,10 @@ with cosine distance — sensible at this scale, but worth knowing.
 
 ## Known limitations
 
-Each defect below is written up in full in
-[docs/BUGS-FOUND.md](docs/BUGS-FOUND.md) — file and line, how to reproduce it,
-and the fix as a diff. An independent adjudication of those fifteen entries
-confirmed twelve and rejected three; ten of the twelve have since been fixed on
-the default branch. What is left is listed first.
+Defects are tracked as
+[GitHub issues](https://github.com/Bissbert/cookingRAG/issues). These are the
+limits of the design and of the one recorded run:
 
-### Still open
-
-- **No LLM and no embedding model are configured for the query path**
-  ([BUG-04](docs/BUGS-FOUND.md#bug-04)). `query_recipes.py` imports and builds
-  its index correctly now, but without a configured response model
-  `llama_index` falls back to OpenAI, which contradicts the local-only premise.
-  Choosing the supported local query model — and an embedding identity that
-  matches the historical vectors — is a product decision, so nothing was
-  guessed. [Details](docs/05-query.md).
-- **`embed_dim=1536` is hard-coded** while the embedding model is `bge-m3`
-  ([BUG-09](docs/BUGS-FOUND.md#bug-09)). 1536 is the OpenAI/`PGVectorStore`
-  default; the Ollama metadata for `bge-m3` reports 1024. Changing the width is
-  not a patch — it needs a canonical embedding model and a reindex plan for the
-  existing vector column. [Details](docs/04-storage.md).
 - **At most 10 images per run.** `sample=10` is hard-coded with no CLI flag.
   The order is now the discovered order unless `shuffle=True` is passed.
 - **Extraction on handwriting was not reliable** in the one recorded run: four
@@ -219,66 +193,14 @@ the default branch. What is left is listed first.
 - **Dietary inference is unverified and was wrong at least once** — a veal-stock
   soup was labelled `vegetarian`. Do not rely on this field for anything that
   matters.
-- **Configuration is read at import time** and duplicated verbatim between
-  `util/database_conection.py` and `query_recipes.py`. The two copies are
-  byte-identical, so nothing has diverged yet — but any change has to be made
-  twice, by hand.
-- **A cloned repository is ~78 MiB for 17 files.** A virtualenv was committed in
+- **Configuration is read at import time.** Setting an environment variable
+  after `util/database_conection.py` or `util/embedding_util.py` is imported has
+  no effect.
+- **A cloned repository packs to ~78 MiB.** A virtualenv was committed in
   the initial commit and deleted in `7e9c095f`; the blobs remain in history and
-  account for **99.3 %** of all object bytes. Deleting files does not shrink
+  account for **99.1 %** of all object bytes. Deleting files does not shrink
   history — only a rewrite would. `python3 tools/repo_size.py` shows the
   breakdown.
-
-### Recorded, then rejected on review
-
-- **`initModel()` is an empty function** ([BUG-06](docs/BUGS-FOUND.md#bug-06)).
-  It is a no-op, but ingestion passes its model explicitly and the query entry
-  point never calls it, so no runtime defect follows. Dead scaffolding, not a
-  broken initialization path.
-- **`recipe.dict()` is removed in pydantic 3**
-  ([BUG-10](docs/BUGS-FOUND.md#bug-10)). A future-major removal, not a present
-  failure of the pinned dependency set.
-- **Ingestion is sequential despite the async scaffolding**
-  ([BUG-12](docs/BUGS-FOUND.md#bug-12)). Accurate as a description, but nothing
-  in the contract or in a measurement promises parallel execution, and the
-  proposed change still wraps blocking model calls. An optimization proposal,
-  not a functional bug.
-
-### Fixed on the default branch since this pass
-
-- **Ingredients and instructions were never embedded**
-  ([BUG-01](docs/BUGS-FOUND.md#bug-01)). `get_nodes_from_objs()` read fields the
-  `Recipe` does not have, so the stored text was title and cook time only. It
-  now renders the string ingredients and `instructionsAsString`.
-  [Details](docs/03-indexing.md).
-- **`query_recipes.py` did not import**
-  ([BUG-02](docs/BUGS-FOUND.md#bug-02)). It used the pre-0.10 flat
-  `llama_index` layout against the pinned 0.12.2; the imports now match the
-  pinned package layout.
-- **The query index was built with no nodes and no vector store**
-  ([BUG-03](docs/BUGS-FOUND.md#bug-03)). It is now constructed with
-  `VectorStoreIndex.from_vector_store`, so it reads the persisted vectors.
-- **`requirements.txt` did not resolve**
-  ([BUG-05](docs/BUGS-FOUND.md#bug-05)). The `pydantic` pin is now `2.9.2`.
-- **The `shuffle` parameter was declared and never read**
-  ([BUG-07](docs/BUGS-FOUND.md#bug-07)). `random.shuffle` is now called only
-  when `shuffle=True`.
-- **`PG_DB_NAME` was interpolated unquoted** into SQL
-  ([BUG-08](docs/BUGS-FOUND.md#bug-08)). The existence check binds the name as
-  a parameter and creation uses `psycopg2.sql.Identifier`.
-- **Both prompts were printed on import**
-  ([BUG-11](docs/BUGS-FOUND.md#bug-11)). They are now `logging.debug` calls.
-- **One failure lost the whole run**
-  ([BUG-13](docs/BUGS-FOUND.md#bug-13)). Batch extraction now catches failures
-  per image, logs them, and returns the successful results. A durable
-  checkpoint was deliberately not invented.
-- **The vision-model retry loop caught only `ResponseError`**
-  ([BUG-14](docs/BUGS-FOUND.md#bug-14)). Both retry loops now cover transport
-  failures, timeouts and connection failures, and no longer retry validation or
-  programming errors.
-- **The `Recipe` docstring contradicted its own fields**
-  ([BUG-15](docs/BUGS-FOUND.md#bug-15)). It now documents the `undefined` type
-  option and the unconstrained string dietary preference.
 
 ## Configuration
 
@@ -290,17 +212,22 @@ the default branch. What is left is listed first.
 | `PG_PASSWORD` | `your_database_password` | **breaks** — the literal default is sent and authentication fails |
 | `PG_DB_NAME` | `recipe_db` | fine |
 
-Model names, the Ollama URL, the table name, `embed_dim`, timeouts, retry counts
-and `similarity_top_k` are all hard-coded.
+| `EMBED_MODEL` | `bge-m3` | fine |
+| `OLLAMA_BASE_URL` | `http://localhost:11434` | fine; used by the embedder only |
+| `EMBED_DIM` | width of `EMBED_MODEL` (1024 for `bge-m3`) | fine; set it for a model the code does not know, or it is probed once |
+
+The vision and chat model names, the table name, timeouts, retry counts and
+`similarity_top_k` are hard-coded.
 [Full table, with line numbers](docs/06-configuration.md).
 
 ## Status
 
 Experimental. Ingestion runs end to end when the models and the database are
 present, the query entry point imports and reads the persisted vectors, and the
-indexing step now embeds ingredients and instructions. The query path still has
-no configured local response or embedding model, and the hard-coded `embed_dim`
-still does not match `bge-m3`. Treat it as a working sketch of a local RAG
+indexing step now embeds ingredients and instructions. The query path uses the
+same local models as ingestion, and the vector column is sized from the
+embedding model. A pytest suite covers these paths with the models faked
+(`sh tests/docker.sh`). Treat it as a working sketch of a local RAG
 pipeline rather than something to put recipes into and trust.
 
 ## License

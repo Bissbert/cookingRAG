@@ -6,21 +6,19 @@ describes.
 
 | | Stage | Source | In one line |
 |---|---|---|---|
-| 1 | [Ingestion](01-ingestion.md) | [`ingest_recipes.py`](../ingest_recipes.py) | Picks ten random images and drives the whole run, sequentially. |
+| 1 | [Ingestion](01-ingestion.md) | [`ingest_recipes.py`](../ingest_recipes.py) | Takes the first ten images it finds and drives the whole run, sequentially. |
 | 2 | [Extraction](02-extraction.md) | [`util/ingestion_model_interaction.py`](../util/ingestion_model_interaction.py) | Two Ollama models in series: photo → free text → `Recipe`. |
-| 3 | [Indexing](03-indexing.md) | [`util/recipe.py`](../util/recipe.py), [`util/embedding_util.py`](../util/embedding_util.py) | Flattens a `Recipe` to text. It dropped the ingredients and instructions doing it; that is now fixed. |
-| 4 | [Storage](04-storage.md) | [`util/database_conection.py`](../util/database_conection.py) | One row per recipe in `public.data_recipes`, no vector index. |
-| 5 | [Query](05-query.md) | [`query_recipes.py`](../query_recipes.py) | The retrieval half. It did not import at the time of this pass; that is now fixed. |
+| 3 | [Indexing](03-indexing.md) | [`util/recipe.py`](../util/recipe.py), [`util/embedding_util.py`](../util/embedding_util.py) | Flattens a `Recipe` to text: title, cook time, ingredients and instructions, and embeds it. |
+| 4 | [Storage](04-storage.md) | [`util/database_conection.py`](../util/database_conection.py) | One row per recipe in `public.data_recipes`, sized from the embedding model, no vector index. |
+| 5 | [Query](05-query.md) | [`query_recipes.py`](../query_recipes.py) | The retrieval half, on the same local models as ingestion. |
 | 6 | [Configuration](06-configuration.md) | — | Every environment variable, every hard-coded value. |
-| — | [Measurement](measurement.md) | [`tools/`](../tools) | How every number here was produced, and what was not run. |
-| — | [Bugs found](BUGS-FOUND.md) | — | Fifteen defects found while reading the source. Twelve confirmed on review, ten since fixed. |
+| — | [Measurement](measurement.md) | [`tools/`](../tools), [`tests/`](../tests) | How every number here was produced, in Linux containers, the test suite, and what was not run. |
 
 ## Reading order
 
-If you only read one, read [03 — Indexing](03-indexing.md): it explains why the
-text that reaches the vector store is not the text you would expect. For the
-defects on their own, with a proposed diff each, see
-[BUGS-FOUND.md](BUGS-FOUND.md).
+The stages are in data order. If you only read one, read
+[05 — Query](05-query.md): it shows the whole loop, from a question to the
+stored vectors and back.
 
 ```mermaid
 flowchart LR
@@ -29,19 +27,17 @@ flowchart LR
     C --> D["<b>3</b><br/>indexing"]
     D --> E["<b>4</b><br/>storage"]
     E --> F["<b>5</b><br/>query"]
-
-    style D fill:#da3633,stroke:#f85149,color:#fff
-    style F fill:#da3633,stroke:#f85149,color:#fff
 ```
 
-Red marks the two stages with defects serious enough to change what the system
-does: indexing silently discards most of each recipe, and the query entry point
-fails at import.
+Open defects are tracked as
+[GitHub issues](https://github.com/Bissbert/cookingRAG/issues).
 
 ## Tools
 
 Everything in [`tools/`](../tools) is runnable and produced something quoted in
-these pages.
+these pages. `linux-run.sh` runs all of them in Linux containers, with a
+throwaway pgvector server, and its output is
+[`media/captures/linux-run.txt`](../media/captures/linux-run.txt).
 
 | Script | Produces | Needs |
 |---|---|---|
@@ -52,5 +48,6 @@ these pages.
 | [`node_preview.py`](../tools/node_preview.py) | the node text in doc 03 | project deps |
 | [`show_schema.py`](../tools/show_schema.py) | the `CREATE TABLE` in doc 04 | project deps |
 | [`make_media.py`](../tools/make_media.py) | [`media/corpus.jpg`](../media/corpus.jpg) | Pillow |
+| [`linux-run.sh`](../tools/linux-run.sh) | [`media/captures/linux-run.txt`](../media/captures/linux-run.txt) | Docker |
 
 [← back to the overview](../README.md)
