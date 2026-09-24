@@ -81,10 +81,11 @@ from util.database_conection import setup_database
 setup_database(); setup_database()"
 echo "exit=$?"
 
-section "query_recipes.py against an empty store, no OpenAI key"
+section "query_recipes.py against an empty store, no Ollama daemon, no OpenAI key"
 PG_DB_NAME="recipe-db; x" python3 query_recipes.py something vegetarian with lentils >/tmp/q.log 2>&1
 echo "exit=$?"
-grep -E "^(ValueError|Could not load|No API key)" /tmp/q.log
+echo "last line: $(tail -n 1 /tmp/q.log)"
+grep -c -i openai /tmp/q.log | sed "s/^/lines mentioning OpenAI: /"
 
 section "tools/make_media.py reproduces media/corpus.jpg"
 python3 tools/make_media.py >/dev/null

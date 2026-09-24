@@ -33,10 +33,10 @@ export file the author committed after their own run.
 | --------------------------- | --- |
 | python                      | OK   3.12.14 |
 | ollama daemon               | FAIL unreachable at http://localhost:11434 |
-|   model llama3.2-vision:90b | FAIL unknown - daemon down (util/ingestion_model_interaction.py:14) |
-|   model qwq                 | FAIL unknown - daemon down (util/ingestion_model_interaction.py:17) |
-|   model bge-m3              | FAIL unknown - daemon down (util/embedding_util.py:10) |
-| postgres tcp                | OK   cookingrag-db-49291:5432 open |
+|   model llama3.2-vision:90b | FAIL unknown - daemon down (util/ingestion_model_interaction.py:23) |
+|   model qwq                 | FAIL unknown - daemon down (util/ingestion_model_interaction.py:26) |
+|   model bge-m3              | FAIL unknown - daemon down (util/embedding_util.py:12) |
+| postgres tcp                | OK   cookingrag-db-18335:5432 open |
 | psycopg2                    | OK   importable |
 | llama_index.core            | OK   0.12.2 |
 ```
@@ -51,20 +51,22 @@ alone is a ~55 GB download, which is why the run stops short of the models.
 | File | Lines | Bytes |
 | --- | ---: | ---: |
 | `ingest_recipes.py` | 127 | 3,863 |
-| `query_recipes.py` | 53 | 1,740 |
+| `query_recipes.py` | 44 | 1,448 |
 | `util/recipe.py` | 32 | 1,498 |
 | `util/json_util.py` | 15 | 411 |
-| `util/embedding_util.py` | 51 | 1,671 |
-| `util/database_conection.py` | 66 | 2,349 |
+| `util/embedding_util.py` | 82 | 2,777 |
+| `util/database_conection.py` | 67 | 2,366 |
 | `util/ingestion_model_interaction.py` | 164 | 5,718 |
-| **total** | **508** | **17,250** |
+| **total** | **531** | **18,081** |
 
 ## Dependency resolution
 
 `pip install -r requirements.txt` exits 0 on Python 3.12.14 with pip 25.0.1,
 and installs **pydantic 2.9.2** and **llama-index-core 0.12.2**. The earlier
 `pydantic==1.10.17` pin that made the file unresolvable was replaced in
-`8b10cf36` (BUG-05).
+`8b10cf36`. `llama-index-vector-stores-postgres` is pinned to 0.3.2, since 0.3.1
+never created the table on a new database
+([#7](https://github.com/Bissbert/cookingRAG/issues/7)).
 
 ## The two entry points
 
@@ -94,17 +96,18 @@ second call sees the database the first one made. See
 ## A query with no models
 
 `query_recipes.py something vegetarian with lentils` against that database,
-with no `OPENAI_API_KEY` set:
+with no Ollama daemon and no `OPENAI_API_KEY` set:
 
 ```
 exit=1
-ValueError: No API key found for OpenAI.
-Could not load OpenAI embedding model. If you intended to use OpenAI, please check your OPENAI_API_KEY.
+last line: httpx.ConnectError: [Errno 99] Cannot assign requested address
+lines mentioning OpenAI: 0
 ```
 
-The script imports and connects, then stops because it configures no local
-model and llama_index falls back to OpenAI. That is BUG-04, still open. See
-[05 — Query](05-query.md).
+The script imports, connects and configures the local models, then stops
+where it tries to reach Ollama. It no longer falls back to OpenAI
+([#5](https://github.com/Bissbert/cookingRAG/issues/5)). The successful path is
+covered by the [test suite](#test-suite). See [05 — Query](05-query.md).
 
 ## The generated database schema
 
@@ -118,14 +121,16 @@ CREATE TABLE public.data_recipes (
 	text VARCHAR NOT NULL,
 	metadata_ JSON,
 	node_id VARCHAR,
-	embedding VECTOR(1536),
+	embedding VECTOR(1024),
 	PRIMARY KEY (id)
 )
 ```
 
 No HNSW or IVFFlat index is created, so similarity search is a sequential scan.
-The `VECTOR(1536)` width is BUG-09, still open; see
-[04 — Storage](04-storage.md).
+The width is `embedding_dim()` for `bge-m3`, 1024, taken from the embedding
+model rather than hard-coded
+([#6](https://github.com/Bissbert/cookingRAG/issues/6)); see
+[04 — Storage](04-storage.md#the-vector-width).
 
 ## What `get_nodes_from_objs()` emits
 
@@ -186,15 +191,54 @@ top-level path:
 
 | Top-level path | Blobs | Uncompressed bytes | Share |
 | --- | ---: | ---: | ---: |
-| `venv` | 14,948 | 253,436,221 | 99.2 % |
+| `venv` | 14,948 | 253,436,221 | 99.1 % |
 | `testRecipes` | 5 | 1,548,272 | 0.6 % |
-| `docs` | 18 | 143,440 | 0.1 % |
-| everything else | 52 | 335,645 | 0.1 % |
-| **total** | **15,023** | **255,463,578** | |
+| `media` | 3 | 248,519 | 0.1 % |
+| `docs` | 26 | 207,497 | 0.1 % |
+| everything else | 63 | 253,495 | 0.1 % |
+| **total** | **15,045** | **255,694,004** | |
 
 `git count-objects -vH` reports `in-pack: 16965`, `size-pack: 78.31 MiB`. A
 virtualenv was committed in the initial commit `d3ea1ea4` and deleted in
 `7e9c095f`; deleting it removed it from the working tree but not from history.
+
+## Test suite
+
+[`tests/docker.sh`](../tests/docker.sh) runs the pytest suite the same way:
+a `pgvector/pgvector:pg16` server and a `python:3.12-slim-bookworm` container
+on a private network, with `requirements.txt` and pytest installed. No model is
+called. `tests/conftest.py` replaces the Ollama embedding and chat calls with
+fakes that record the model name and return fixed vectors and a fixed answer,
+and removes any `OPENAI_API_KEY`.
+
+```sh
+sh tests/docker.sh > media/captures/tests.txt
+```
+
+Its output is [`media/captures/tests.txt`](../media/captures/tests.txt). The
+four warnings are pydantic's deprecation notice for `Recipe.dict()`, called
+during ingestion:
+
+```
+.............                                                            [100%]
+...
+13 passed, 4 warnings in 1.23s
+```
+
+| File | Covers |
+|---|---|
+| `tests/test_query_models.py` | [#5](https://github.com/Bissbert/cookingRAG/issues/5): the query path sets `bge-m3` and `qwq`, and resolving them does not reach OpenAI |
+| `tests/test_embed_dim.py` | [#6](https://github.com/Bissbert/cookingRAG/issues/6): the store is created with the model's width, `EMBED_DIM` overrides it, and an unknown model is probed |
+| `tests/test_pgvector.py` | [#6](https://github.com/Bissbert/cookingRAG/issues/6), [#7](https://github.com/Bissbert/cookingRAG/issues/7): against the real pgvector server, a new database gets `public.data_recipes` with `vector(1024)`, two recipes ingest, and `query_recipes.main()` answers through `bge-m3` and `qwq` |
+
+Each fix was reverted in turn and the suite re-run, to check that the tests
+catch it:
+
+| Fix reverted | Failing tests |
+|---|---|
+| [#5](https://github.com/Bissbert/cookingRAG/issues/5): old `query_recipes.py` | 5 (4 in `test_query_models.py`, the query test in `test_pgvector.py`) |
+| [#6](https://github.com/Bissbert/cookingRAG/issues/6): `embed_dim=1536` | 5 (2 in `test_embed_dim.py`, 3 in `test_pgvector.py`) |
+| [#7](https://github.com/Bissbert/cookingRAG/issues/7): `llama-index-vector-stores-postgres==0.3.1` | 3 (all in `test_pgvector.py`) |
 
 ## The contact sheet
 
@@ -219,7 +263,7 @@ repository content; it is not a capture of a program run.
 | Quantity | Why not |
 |---|---|
 | Ingest wall-clock time per image | Vision model not available. |
-| Query latency | No embedding model. |
+| Query latency | No Ollama daemon; the tests fake the models. |
 | Retrieval quality / recall | Would need a labelled query set; none exists. |
 | Extraction accuracy as a score | n = 5, one run, unknown model build. Described qualitatively instead. |
-| Actual `bge-m3` embedding width | Model not pulled. The mismatch with `embed_dim=1536` is discussed in [04 — Storage](04-storage.md) as a code-level observation. |
+| Actual `bge-m3` embedding width | Model not pulled. The code assumes 1024, from the model's published metadata; [04 — Storage](04-storage.md#the-vector-width) shows how to check it. |

@@ -80,16 +80,15 @@ Two corrections to the previous instructions:
   (`nargs='+'`). `python query_recipes.py` with no arguments is an argparse
   error.
 
-Until the query path gets a local model (BUG-04), `query_recipes.py` needs an
-`OPENAI_API_KEY`; without one it exits with
-`Could not load OpenAI embedding model`.
+No OpenAI key is needed: `query_recipes.py` embeds the question with `bge-m3`
+and answers with `qwq`, the same models ingestion uses.
 
 ## Requirements
 
 | | Needed | Notes |
 |---|---|---|
 | Python | 3.12 tested | `requirements.txt` installs cleanly in `python:3.12-slim-bookworm`. |
-| Ollama | daemon on `localhost:11434` | Hard-coded; `OLLAMA_HOST` is not honoured. |
+| Ollama | daemon on `localhost:11434` | The embedder reads `OLLAMA_BASE_URL`; the vision and chat models are hard-coded to the default. `OLLAMA_HOST` is not honoured. |
 | `llama3.2-vision:90b` | image → text | ~55 GB. `:11b` is a one-line substitution, unevaluated here. |
 | `qwq` | text → structured `Recipe` | |
 | `bge-m3` | embeddings | Not mentioned in the previous README. |
@@ -140,19 +139,20 @@ recipeExport-*.json   output of one real ingest run, committed
 docs/                 a write-up per pipeline stage, plus methodology
 tools/                the scripts that produced every number in the docs,
                       and linux-run.sh, which runs them all in containers
+tests/                pytest suite; sh tests/docker.sh runs it in containers
 media/                generated figures
 ```
 
 | File | Lines | Bytes |
 | --- | ---: | ---: |
 | `ingest_recipes.py` | 127 | 3,863 |
-| `query_recipes.py` | 53 | 1,740 |
+| `query_recipes.py` | 44 | 1,448 |
 | `util/recipe.py` | 32 | 1,498 |
 | `util/json_util.py` | 15 | 411 |
-| `util/embedding_util.py` | 51 | 1,671 |
-| `util/database_conection.py` | 66 | 2,349 |
+| `util/embedding_util.py` | 82 | 2,777 |
+| `util/database_conection.py` | 67 | 2,366 |
 | `util/ingestion_model_interaction.py` | 164 | 5,718 |
-| **total** | **508** | **17,250** |
+| **total** | **531** | **18,081** |
 
 → [Full documentation](docs/README.md) ·
 [how this was measured](docs/measurement.md) ·
@@ -169,7 +169,7 @@ CREATE TABLE public.data_recipes (
 	text VARCHAR NOT NULL,
 	metadata_ JSON,
 	node_id VARCHAR,
-	embedding VECTOR(1536),
+	embedding VECTOR(1024),
 	PRIMARY KEY (id)
 )
 ```
@@ -183,23 +183,11 @@ with cosine distance — sensible at this scale, but worth knowing.
 Each defect below is written up in full in
 [docs/BUGS-FOUND.md](docs/BUGS-FOUND.md) — file and line, how to reproduce it,
 and the fix as a diff. An independent adjudication of those fifteen entries
-confirmed twelve and rejected three; ten of the twelve have since been fixed on
-the default branch. What is left is listed first.
+confirmed twelve and rejected three; all twelve have since been fixed. What is
+left is listed first.
 
 ### Still open
 
-- **No LLM and no embedding model are configured for the query path**
-  ([BUG-04](docs/BUGS-FOUND.md#bug-04)). `query_recipes.py` imports and builds
-  its index correctly now, but without a configured response model
-  `llama_index` falls back to OpenAI, which contradicts the local-only premise.
-  Choosing the supported local query model — and an embedding identity that
-  matches the historical vectors — is a product decision, so nothing was
-  guessed. [Details](docs/05-query.md).
-- **`embed_dim=1536` is hard-coded** while the embedding model is `bge-m3`
-  ([BUG-09](docs/BUGS-FOUND.md#bug-09)). 1536 is the OpenAI/`PGVectorStore`
-  default; the Ollama metadata for `bge-m3` reports 1024. Changing the width is
-  not a patch — it needs a canonical embedding model and a reindex plan for the
-  existing vector column. [Details](docs/04-storage.md).
 - **At most 10 images per run.** `sample=10` is hard-coded with no CLI flag.
   The order is now the discovered order unless `shuffle=True` is passed.
 - **Extraction on handwriting was not reliable** in the one recorded run: four
@@ -209,13 +197,12 @@ the default branch. What is left is listed first.
 - **Dietary inference is unverified and was wrong at least once** — a veal-stock
   soup was labelled `vegetarian`. Do not rely on this field for anything that
   matters.
-- **Configuration is read at import time** and duplicated verbatim between
-  `util/database_conection.py` and `query_recipes.py`. The two copies are
-  byte-identical, so nothing has diverged yet — but any change has to be made
-  twice, by hand.
-- **A cloned repository is ~78 MiB for 17 files.** A virtualenv was committed in
+- **Configuration is read at import time.** Setting an environment variable
+  after `util/database_conection.py` or `util/embedding_util.py` is imported has
+  no effect.
+- **A cloned repository packs to ~78 MiB.** A virtualenv was committed in
   the initial commit and deleted in `7e9c095f`; the blobs remain in history and
-  account for **99.3 %** of all object bytes. Deleting files does not shrink
+  account for **99.1 %** of all object bytes. Deleting files does not shrink
   history — only a rewrite would. `python3 tools/repo_size.py` shows the
   breakdown.
 
@@ -235,6 +222,17 @@ the default branch. What is left is listed first.
   not a functional bug.
 
 ### Fixed on the default branch since this pass
+
+- **The query path had no local model and fell back to OpenAI**
+  ([#5](https://github.com/Bissbert/cookingRAG/issues/5)). It now uses `bge-m3`
+  and `qwq`, as ingestion does. [Details](docs/05-query.md).
+- **`embed_dim=1536` was hard-coded** while the embedding model is `bge-m3`
+  ([#6](https://github.com/Bissbert/cookingRAG/issues/6)). The width now comes
+  from the model: 1024 for `bge-m3`, or `EMBED_DIM`. A table created at 1536
+  has to be dropped and ingested again. [Details](docs/04-storage.md#the-vector-width).
+- **Ingest never created the vector table**
+  ([#7](https://github.com/Bissbert/cookingRAG/issues/7)).
+  `llama-index-vector-stores-postgres` is now pinned to 0.3.2.
 
 - **Ingredients and instructions were never embedded**
   ([BUG-01](docs/BUGS-FOUND.md#bug-01)). `get_nodes_from_objs()` read fields the
@@ -280,17 +278,22 @@ the default branch. What is left is listed first.
 | `PG_PASSWORD` | `your_database_password` | **breaks** — the literal default is sent and authentication fails |
 | `PG_DB_NAME` | `recipe_db` | fine |
 
-Model names, the Ollama URL, the table name, `embed_dim`, timeouts, retry counts
-and `similarity_top_k` are all hard-coded.
+| `EMBED_MODEL` | `bge-m3` | fine |
+| `OLLAMA_BASE_URL` | `http://localhost:11434` | fine; used by the embedder only |
+| `EMBED_DIM` | width of `EMBED_MODEL` (1024 for `bge-m3`) | fine; set it for a model the code does not know, or it is probed once |
+
+The vision and chat model names, the table name, timeouts, retry counts and
+`similarity_top_k` are hard-coded.
 [Full table, with line numbers](docs/06-configuration.md).
 
 ## Status
 
 Experimental. Ingestion runs end to end when the models and the database are
 present, the query entry point imports and reads the persisted vectors, and the
-indexing step now embeds ingredients and instructions. The query path still has
-no configured local response or embedding model, and the hard-coded `embed_dim`
-still does not match `bge-m3`. Treat it as a working sketch of a local RAG
+indexing step now embeds ingredients and instructions. The query path uses the
+same local models as ingestion, and the vector column is sized from the
+embedding model. A pytest suite covers these paths with the models faked
+(`sh tests/docker.sh`). Treat it as a working sketch of a local RAG
 pipeline rather than something to put recipes into and trust.
 
 ## License

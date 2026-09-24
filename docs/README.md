@@ -8,18 +8,18 @@ describes.
 |---|---|---|---|
 | 1 | [Ingestion](01-ingestion.md) | [`ingest_recipes.py`](../ingest_recipes.py) | Takes the first ten images it finds and drives the whole run, sequentially. |
 | 2 | [Extraction](02-extraction.md) | [`util/ingestion_model_interaction.py`](../util/ingestion_model_interaction.py) | Two Ollama models in series: photo → free text → `Recipe`. |
-| 3 | [Indexing](03-indexing.md) | [`util/recipe.py`](../util/recipe.py), [`util/embedding_util.py`](../util/embedding_util.py) | Flattens a `Recipe` to text: title, cook time, ingredients and instructions. |
-| 4 | [Storage](04-storage.md) | [`util/database_conection.py`](../util/database_conection.py) | One row per recipe in `public.data_recipes`, no vector index. |
-| 5 | [Query](05-query.md) | [`query_recipes.py`](../query_recipes.py) | The retrieval half. Still no local model configured, so it falls back to OpenAI. |
+| 3 | [Indexing](03-indexing.md) | [`util/recipe.py`](../util/recipe.py), [`util/embedding_util.py`](../util/embedding_util.py) | Flattens a `Recipe` to text: title, cook time, ingredients and instructions, and embeds it. |
+| 4 | [Storage](04-storage.md) | [`util/database_conection.py`](../util/database_conection.py) | One row per recipe in `public.data_recipes`, sized from the embedding model, no vector index. |
+| 5 | [Query](05-query.md) | [`query_recipes.py`](../query_recipes.py) | The retrieval half, on the same local models as ingestion. |
 | 6 | [Configuration](06-configuration.md) | — | Every environment variable, every hard-coded value. |
-| — | [Measurement](measurement.md) | [`tools/`](../tools) | How every number here was produced, in Linux containers, and what was not run. |
+| — | [Measurement](measurement.md) | [`tools/`](../tools), [`tests/`](../tests) | How every number here was produced, in Linux containers, the test suite, and what was not run. |
 | — | [Bugs found](BUGS-FOUND.md) | — | Fifteen entries: ten fixed, two open, three rejected. |
 
 ## Reading order
 
-If you only read one, read [05 — Query](05-query.md): it is where the two open
-entries meet. For the defects on their own, with the status of each, see
-[BUGS-FOUND.md](BUGS-FOUND.md).
+The stages are in data order. If you only read one, read
+[05 — Query](05-query.md): it shows the whole loop, from a question to the
+stored vectors and back.
 
 ```mermaid
 flowchart LR
@@ -28,14 +28,10 @@ flowchart LR
     C --> D["<b>3</b><br/>indexing"]
     D --> E["<b>4</b><br/>storage"]
     E --> F["<b>5</b><br/>query"]
-
-    style E fill:#9e6a03,stroke:#d29922,color:#fff
-    style F fill:#9e6a03,stroke:#d29922,color:#fff
 ```
 
-Amber marks the two stages with an open entry: storage declares a vector width
-that may not match `bge-m3` (BUG-09), and the query stage has no local model
-configured (BUG-04).
+Open defects are tracked as
+[GitHub issues](https://github.com/Bissbert/cookingRAG/issues).
 
 ## Tools
 
