@@ -3,26 +3,19 @@
 [← back to the overview](../README.md) · see also
 [known limitations](../README.md#known-limitations)
 
-Fifteen defects found while reading the source for this documentation pass.
-None of them was fixed during the pass itself, which was documentation-only, so
-each one is recorded here with the change that would fix it, and the rest of
-the documentation describes the code as it behaved at the time, bug included.
+Fifteen defects were found while reading the source. An independent review
+confirmed twelve and rejected three (BUG-06, BUG-10, BUG-12). Ten of the twelve
+are fixed on the default branch. Two are open because each needs a decision
+rather than a patch:
 
-The diffs below were written from reading the source. None had been applied or
-executed at the time of writing, because the pipeline could not be run at all —
-see [measurement.md](measurement.md) for why.
+- **BUG-04**: which local models the query path should use, with an embedding
+  identity that matches the stored vectors.
+- **BUG-09**: a canonical embedding width, with a reindex plan for the existing
+  vector column.
 
-> **Since this pass:** an independent adjudication confirmed twelve of the
-> fifteen entries recorded here and rejected BUG-06, BUG-10 and BUG-12. A
-> subsequent fix pass applied ten of the twelve to the default branch: BUG-01
-> (`13980e08`), BUG-02 (`418911ae`), BUG-03 (`f23d17df`), BUG-05 (`8b10cf36`),
-> BUG-07 (`918f46c9`), BUG-08 (`6ab82c23`), BUG-11 (`1c87901c`), BUG-13
-> (`13251ae9`), BUG-14 (`85fc8f93`) and BUG-15 (`7693ae8a`). BUG-04 and BUG-09
-> were deferred because each needs a product decision — the supported local
-> query model and its embedding identity, and a canonical embedding width with
-> a reindex plan for the existing vector column — rather than a patch. Read the
-> reproductions and diffs below as the state at the time of the pass, not as
-> the current state of the default branch.
+Each entry below keeps its original description, reproduction and proposed
+diff. The status line under each heading says where it stands now. The other
+pages in [`docs/`](README.md) describe the current code.
 
 ## Where they land
 
@@ -41,43 +34,42 @@ flowchart TD
     E -.-> E1["BUG-08"]
     F -.-> F1["BUG-02 · BUG-03<br/>BUG-04"]
 
-    style C fill:#da3633,stroke:#f85149,color:#fff
-    style F fill:#da3633,stroke:#f85149,color:#fff
-    style C1 fill:#da3633,stroke:#f85149,color:#fff
-    style F1 fill:#da3633,stroke:#f85149,color:#fff
-    style B1 fill:#9e6a03,stroke:#d29922,color:#fff
+    style C1 fill:#238636,stroke:#3fb950,color:#fff
+    style A1 fill:#238636,stroke:#3fb950,color:#fff
+    style E1 fill:#238636,stroke:#3fb950,color:#fff
+    style B1 fill:#238636,stroke:#3fb950,color:#fff
+    style F1 fill:#9e6a03,stroke:#d29922,color:#fff
     style D1 fill:#9e6a03,stroke:#d29922,color:#fff
-    style A1 fill:#1f6feb,stroke:#58a6ff,color:#fff
-    style E1 fill:#1f6feb,stroke:#58a6ff,color:#fff
 ```
 
-Red marks the two stages that are broken rather than merely rough: the
-indexing step throws away most of each recipe, and the query entry point does
-not import.
+Amber marks the two places with an open entry: BUG-04 on the query path and
+BUG-09 at the embedding width. Everything in green is fixed or was rejected.
 
 ## Summary
 
-| ID | File and line | Severity | What happens |
-|---|---|---|---|
-| [BUG-01](#bug-01) | `util/embedding_util.py:38-44` | data loss | Ingredients and instructions never reach the embedded text |
-| [BUG-02](#bug-02) | `query_recipes.py:5-6` | broken | Module does not import |
-| [BUG-03](#bug-03) | `query_recipes.py:32` | broken | Index built with no nodes and no vector store |
-| [BUG-04](#bug-04) | `query_recipes.py` (whole) | broken | No LLM and no embedding model set; falls back to OpenAI |
-| [BUG-05](#bug-05) | `requirements.txt:3` | broken | Dependency set does not resolve |
-| [BUG-06](#bug-06) | `util/ingestion_model_interaction.py:45-51` | broken | `initModel()` is an empty function |
-| [BUG-07](#bug-07) | `ingest_recipes.py:23,41` | surprising | `shuffle` parameter declared and never read |
-| [BUG-08](#bug-08) | `util/database_conection.py:30,33` | injection | Database name interpolated unquoted into SQL |
-| [BUG-09](#bug-09) | `util/database_conection.py:59`, `query_recipes.py:25` | likely broken | `embed_dim=1536` hard-coded against `bge-m3` |
-| [BUG-10](#bug-10) | `util/json_util.py:16` | deprecation | `recipe.dict()` is removed in pydantic 3 |
-| [BUG-11](#bug-11) | `util/ingestion_model_interaction.py:27,41` | noise | Both prompts printed on import |
-| [BUG-12](#bug-12) | `util/ingestion_model_interaction.py:124-141` | performance | Async scaffolding runs strictly sequentially |
-| [BUG-13](#bug-13) | `ingest_recipes.py:81-83` | data loss | One bad image discards the whole run |
-| [BUG-14](#bug-14) | `util/ingestion_model_interaction.py:76` | robustness | First retry loop catches only `ResponseError` |
-| [BUG-15](#bug-15) | `util/recipe.py:24-25` | docs | Docstring contradicts the field declarations |
+| ID | File and line | Severity | What happened | Status |
+|---|---|---|---|---|
+| [BUG-01](#bug-01) | `util/embedding_util.py:38-44` | data loss | Ingredients and instructions never reach the embedded text | Fixed in [`13980e08`](https://github.com/Bissbert/cookingRAG/commit/13980e08) |
+| [BUG-02](#bug-02) | `query_recipes.py:5-6` | broken | Module does not import | Fixed in [`418911ae`](https://github.com/Bissbert/cookingRAG/commit/418911ae) |
+| [BUG-03](#bug-03) | `query_recipes.py:32` | broken | Index built with no nodes and no vector store | Fixed in [`f23d17df`](https://github.com/Bissbert/cookingRAG/commit/f23d17df) |
+| [BUG-04](#bug-04) | `query_recipes.py` (whole) | broken | No LLM and no embedding model set; falls back to OpenAI | Open |
+| [BUG-05](#bug-05) | `requirements.txt:3` | broken | Dependency set does not resolve | Fixed in [`8b10cf36`](https://github.com/Bissbert/cookingRAG/commit/8b10cf36) |
+| [BUG-06](#bug-06) | `util/ingestion_model_interaction.py:45-51` | broken | `initModel()` is an empty function | Rejected on review |
+| [BUG-07](#bug-07) | `ingest_recipes.py:23,41` | surprising | `shuffle` parameter declared and never read | Fixed in [`918f46c9`](https://github.com/Bissbert/cookingRAG/commit/918f46c9) |
+| [BUG-08](#bug-08) | `util/database_conection.py:30,33` | injection | Database name interpolated unquoted into SQL | Fixed in [`6ab82c23`](https://github.com/Bissbert/cookingRAG/commit/6ab82c23) |
+| [BUG-09](#bug-09) | `util/database_conection.py:59`, `query_recipes.py:25` | likely broken | `embed_dim=1536` hard-coded against `bge-m3` | Open |
+| [BUG-10](#bug-10) | `util/json_util.py:16` | deprecation | `recipe.dict()` is removed in pydantic 3 | Rejected on review |
+| [BUG-11](#bug-11) | `util/ingestion_model_interaction.py:27,41` | noise | Both prompts printed on import | Fixed in [`1c87901c`](https://github.com/Bissbert/cookingRAG/commit/1c87901c) |
+| [BUG-12](#bug-12) | `util/ingestion_model_interaction.py:124-141` | performance | Async scaffolding runs strictly sequentially | Rejected on review |
+| [BUG-13](#bug-13) | `ingest_recipes.py:81-83` | data loss | One bad image discards the whole run | Fixed in [`13251ae9`](https://github.com/Bissbert/cookingRAG/commit/13251ae9) |
+| [BUG-14](#bug-14) | `util/ingestion_model_interaction.py:76` | robustness | First retry loop catches only `ResponseError` | Fixed in [`85fc8f93`](https://github.com/Bissbert/cookingRAG/commit/85fc8f93) |
+| [BUG-15](#bug-15) | `util/recipe.py:24-25` | docs | Docstring contradicts the field declarations | Fixed in [`7693ae8a`](https://github.com/Bissbert/cookingRAG/commit/7693ae8a) |
 
 ---
 
 ## BUG-01
+
+**Status: Fixed in [`13980e08`](https://github.com/Bissbert/cookingRAG/commit/13980e08).**
 
 **Ingredients and instructions are silently dropped before embedding.**
 `util/embedding_util.py:38-44`.
@@ -134,6 +126,8 @@ need reingesting.
 
 ## BUG-02
 
+**Status: Fixed in [`418911ae`](https://github.com/Bissbert/cookingRAG/commit/418911ae).**
+
 **`query_recipes.py` does not import.** `query_recipes.py:5-6`.
 
 Both imports use the pre-0.10 flat `llama_index` layout against the 0.12.2
@@ -170,6 +164,8 @@ file is affected.
 
 ## BUG-03
 
+**Status: Fixed in [`f23d17df`](https://github.com/Bissbert/cookingRAG/commit/f23d17df).**
+
 **The query index is constructed with neither nodes nor a vector store.**
 `query_recipes.py:32`.
 
@@ -195,10 +191,12 @@ This cannot be reproduced at runtime today; BUG-02 stops execution first.
 
 ## BUG-04
 
+**Status: Open: needs a decision on the supported local query models and their embedding identity.**
+
 **No models are configured on the query path.** `query_recipes.py`, whole file.
 
-The module never touches `Settings`. Two consequences once BUG-02 and BUG-03
-are fixed:
+The module never touches `Settings`. With BUG-02 and BUG-03 fixed, this is
+what stops a query:
 
 | Missing | Effect |
 |---|---|
@@ -208,6 +206,11 @@ are fixed:
 This contradicts the project's local-only premise: the ingest path embeds with
 `bge-m3` while the query path would embed with an OpenAI model, so the question
 vector and the stored vectors would not even share a space.
+
+Reproduced in a Linux container against a pgvector server with no
+`OPENAI_API_KEY` ([`media/captures/linux-run.txt`](../media/captures/linux-run.txt)):
+`query_recipes.py something vegetarian with lentils` exits 1 with
+`Could not load OpenAI embedding model ... No API key found for OpenAI.`
 
 ```diff
 --- a/query_recipes.py
@@ -237,6 +240,8 @@ model name, at the cost of an import from `util/` that this file currently does
 not have.
 
 ## BUG-05
+
+**Status: Fixed in [`8b10cf36`](https://github.com/Bissbert/cookingRAG/commit/8b10cf36).**
 
 **`requirements.txt` does not resolve.** `requirements.txt:3`.
 
@@ -274,6 +279,8 @@ resolves but is redundant.
 
 ## BUG-06
 
+**Status: Rejected on review.**
+
 **`initModel()` does nothing.** `util/ingestion_model_interaction.py:45-51`.
 
 The function's only statement is commented out, so its body is the docstring
@@ -300,6 +307,8 @@ The commented-out line refers to a name `llm` that does not exist in the
 module; the model object is called `language_model`.
 
 ## BUG-07
+
+**Status: Fixed in [`918f46c9`](https://github.com/Bissbert/cookingRAG/commit/918f46c9).**
 
 **Images are always shuffled, whatever `shuffle` says.**
 `ingest_recipes.py:23` and `ingest_recipes.py:41`.
@@ -330,6 +339,8 @@ Whether the default should then be `shuffle=True` is a product decision, not a
 mechanical fix, which is part of why this is recorded rather than changed.
 
 ## BUG-08
+
+**Status: Fixed in [`6ab82c23`](https://github.com/Bissbert/cookingRAG/commit/6ab82c23).**
 
 **The database name is interpolated unquoted into SQL.**
 `util/database_conection.py:30` and `util/database_conection.py:33`.
@@ -382,6 +393,8 @@ PG_DB_NAME='x"; SELECT 1; --' python ingest_recipes.py ./testRecipes
 
 ## BUG-09
 
+**Status: Open: needs a canonical embedding model and a reindex plan for the existing vector column.**
+
 **`embed_dim=1536` is hard-coded while the embedder is `bge-m3`.**
 `util/database_conection.py:59` and `query_recipes.py:25`, both carrying the
 comment `# Adjust based on your embedding model`.
@@ -391,8 +404,9 @@ comment `# Adjust based on your embedding model`.
 (`util/embedding_util.py:9-13`). `tools/show_schema.py` confirms the column is
 created as `VECTOR(1536)`.
 
-**The width `bge-m3` actually returns was not measured** — the model is not
-available on this machine, so this is a code-level observation, not a
+**The width `bge-m3` actually returns has not been measured**: the containers
+used for [measurement](measurement.md) have no Ollama models. The Ollama
+metadata for `bge-m3` reports 1024, so this is a code-level observation, not a
 confirmed failure. If the widths differ, the first insert fails loudly with a
 pgvector dimension error rather than corrupting anything. To check:
 
@@ -422,6 +436,8 @@ startup.
 
 ## BUG-10
 
+**Status: Rejected on review.**
+
 **`recipe.dict()` is deprecated.** `util/json_util.py:16`.
 
 With the pydantic 2.x that `llama-index-core` 0.12.2 requires, the call still
@@ -444,6 +460,8 @@ It is removed in pydantic 3.
 ```
 
 ## BUG-11
+
+**Status: Fixed in [`1c87901c`](https://github.com/Bissbert/cookingRAG/commit/1c87901c).**
 
 **Both prompts are printed at import time.**
 `util/ingestion_model_interaction.py:27` and `:41`.
@@ -475,6 +493,8 @@ Observed: both prompts are printed above the usage text.
 ```
 
 ## BUG-12
+
+**Status: Rejected on review.**
 
 **The async scaffolding does not make anything concurrent.**
 `util/ingestion_model_interaction.py:124-141`.
@@ -515,6 +535,8 @@ measurement before it is worth applying, and none was possible here.
 
 ## BUG-13
 
+**Status: Fixed in [`13251ae9`](https://github.com/Bissbert/cookingRAG/commit/13251ae9).**
+
 **A single failed image discards every recipe in the run.**
 `ingest_recipes.py:81-83`.
 
@@ -550,6 +572,8 @@ sturdier fix, but it is a larger change than a bug record should propose.
 
 ## BUG-14
 
+**Status: Fixed in [`85fc8f93`](https://github.com/Bissbert/cookingRAG/commit/85fc8f93).**
+
 **The first retry loop catches only `ResponseError`.**
 `util/ingestion_model_interaction.py:76`.
 
@@ -576,6 +600,8 @@ Catching `Exception` is what the other loop already does; narrowing both to the
 transport errors that are actually worth retrying would be better still.
 
 ## BUG-15
+
+**Status: Fixed in [`7693ae8a`](https://github.com/Bissbert/cookingRAG/commit/7693ae8a).**
 
 **The `Recipe` docstring contradicts the fields below it.**
 `util/recipe.py:24-25`.

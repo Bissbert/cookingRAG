@@ -2,7 +2,7 @@
 
 [← back to the overview](../README.md) · source:
 [`util/ingestion_model_interaction.py`](../util/ingestion_model_interaction.py)
-· 140 lines · 5,100 bytes
+· 164 lines · 5,718 bytes
 
 The largest module in the repository, and the only one that talks to a model.
 It turns one image into one `Recipe` object using two Ollama models in series:
@@ -33,21 +33,16 @@ sequenceDiagram
 ```
 
 Both hops are wrapped in the same retry shape: **3 attempts, 5 seconds apart**,
-then re-raise. They differ in what they catch:
+then re-raise. Both catch the same tuple, `RETRYABLE_EXCEPTIONS`:
 
-| Hop | Model | Timeout | Catches |
+| Hop | Model | Timeout | Retries on |
 |---|---|---|---|
-| Image → text | `llama3.2-vision:90b` | 600 s | `ollama._types.ResponseError` only |
-| Text → `Recipe` | `qwq` | 600 s | bare `Exception` |
+| Image → text | `llama3.2-vision:90b` | 600 s | `ResponseError`, `httpx.TransportError`, `TimeoutError`, `ConnectionError` |
+| Text → `Recipe` | `qwq` | 600 s | the same |
 
-The first hop's narrow `except` matters: a connection error, a timeout or a
-read failure is not a `ResponseError`, so it escapes the retry loop on the first
-attempt. Only errors the Ollama server itself reports get retried.
-
-There is also a latent failure mode in the first loop. `recipe` is assigned
-inside the `try`; if the very first attempt raises something other than
-`ResponseError`, execution leaves the loop without `recipe` ever being bound,
-and the code below raises `UnboundLocalError` rather than the original error.
+Errors the Ollama server reports and transport failures are retried. Anything
+else, such as a validation or programming error, propagates on the first
+attempt with its original traceback.
 
 ## The prompts
 
@@ -64,10 +59,9 @@ Do not assume the dietary preference is explicitly stated; instead,
 infer it logically. Keep the dietary preferences short and precice.
 ```
 
-Both prompt strings are `print()`ed at **import time**, at module scope. Any
-program that imports this module — including `ingest_recipes.py --help` — dumps
-both prompts to stdout before doing anything else. That is why the usage message
-is preceded by two blocks of prompt text.
+Both prompt strings are logged at `DEBUG` level when the module is imported.
+With the `INFO` level `ingest_recipes.py` configures, they do not appear, and
+`ingest_recipes.py --help` prints only its usage.
 
 Note also that the `recipe_to_json_template` ends with the line `Pydantic Model
 Definition:` and then stops. The schema itself is appended by
@@ -149,8 +143,8 @@ record 1: FAILS - instructionsAsString: Field required
 record 5: FAILS - instructionsAsString: Field required
 ```
 
-The export predates the rename. That same rename is what silently broke node
-building — see [03 — Indexing](03-indexing.md).
+The export predates the rename. Node building lagged behind the same rename
+until commit `13980e08`; see [03 — Indexing](03-indexing.md).
 
 ## Next
 

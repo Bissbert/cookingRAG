@@ -18,7 +18,7 @@ was repaired, and are worth reading before you try to use it.
 
 ```mermaid
 flowchart TD
-    IMG["recipe photos<br/>jpg · jpeg · png"] --> SEL["get_image_files<br/><i>shuffle, take 10</i>"]
+    IMG["recipe photos<br/>jpg · jpeg · png"] --> SEL["get_image_files<br/><i>first 10 found</i>"]
     SEL --> RD["SimpleDirectoryReader<br/>→ ImageDocument"]
     RD --> VIS["<b>llama3.2-vision:90b</b><br/>photo → free-text recipe<br/><i>translate, infer diet</i>"]
     VIS --> STR["<b>qwq</b> + PydanticOutputParser<br/>free text → Recipe object"]
@@ -37,20 +37,19 @@ flowchart TD
     style EMB fill:#1f6feb,stroke:#58a6ff,color:#fff
     style QEMB fill:#1f6feb,stroke:#58a6ff,color:#fff
     style PG fill:#238636,stroke:#3fb950,color:#fff
-    style NODE fill:#da3633,stroke:#f85149,color:#fff
+    style NODE fill:#238636,stroke:#3fb950,color:#fff
     style GEN fill:#9e6a03,stroke:#d29922,color:#fff
 ```
 
-Three models, one database, no chunking — a recipe is one row. Red marks the
-step that loses data ([why](docs/03-indexing.md)); amber marks the step with no
-model configured ([why](docs/05-query.md)).
+Three models, one database, no chunking — a recipe is one row. Amber marks the
+step with no model configured ([why](docs/05-query.md)).
 
 ## Quick start
 
-**This quick start has not been run end to end.** No machine available while
-writing it had the models and a pgvector server at the same time; the commands
-below are derived from the source, and the two places where the previous README
-did not match the code are corrected. See
+**This quick start has not been run end to end with the models.** In a Linux
+container against a pgvector server, `pip install -r requirements.txt` succeeds,
+both entry points start, and the database is created; the model steps were not
+run because the containers have no Ollama models. See
 [docs/measurement.md](docs/measurement.md).
 
 ```sh
@@ -81,25 +80,15 @@ Two corrections to the previous instructions:
   (`nargs='+'`). `python query_recipes.py` with no arguments is an argparse
   error.
 
-At the time of this pass `pip install -r requirements.txt` failed as committed:
-
-```
-ERROR: Cannot install -r requirements.txt (line 8) and pydantic==1.10.17
-because these package versions have conflicting dependencies.
-    The user requested pydantic==1.10.17
-    llama-index-core 0.12.2 depends on pydantic<2.10.0 and >=2.7.0
-ERROR: ResolutionImpossible
-```
-
-The pin has since been changed to `pydantic==2.9.2`, which satisfies
-`llama-index-core` 0.12.2. A full install was not run to confirm the whole set
-resolves.
+Until the query path gets a local model (BUG-04), `query_recipes.py` needs an
+`OPENAI_API_KEY`; without one it exits with
+`Could not load OpenAI embedding model`.
 
 ## Requirements
 
 | | Needed | Notes |
 |---|---|---|
-| Python | 3.11 tested | The conflicting pydantic pin has been corrected to `2.9.2`. |
+| Python | 3.12 tested | `requirements.txt` installs cleanly in `python:3.12-slim-bookworm`. |
 | Ollama | daemon on `localhost:11434` | Hard-coded; `OLLAMA_HOST` is not honoured. |
 | `llama3.2-vision:90b` | image → text | ~55 GB. `:11b` is a one-line substitution, unevaluated here. |
 | `qwq` | text → structured `Recipe` | |
@@ -149,20 +138,21 @@ util/                 the five modules the pipeline is built from
 testRecipes/          five real recipe photographs
 recipeExport-*.json   output of one real ingest run, committed
 docs/                 a write-up per pipeline stage, plus methodology
-tools/                the scripts that produced every number in the docs
+tools/                the scripts that produced every number in the docs,
+                      and linux-run.sh, which runs them all in containers
 media/                generated figures
 ```
 
 | File | Lines | Bytes |
 | --- | ---: | ---: |
-| `ingest_recipes.py` | 126 | 3,843 |
-| `query_recipes.py` | 51 | 1,683 |
-| `util/recipe.py` | 31 | 1,567 |
+| `ingest_recipes.py` | 127 | 3,863 |
+| `query_recipes.py` | 53 | 1,740 |
+| `util/recipe.py` | 32 | 1,498 |
 | `util/json_util.py` | 15 | 411 |
-| `util/embedding_util.py` | 55 | 1,842 |
-| `util/database_conection.py` | 62 | 2,254 |
-| `util/ingestion_model_interaction.py` | 140 | 5,100 |
-| **total** | **480** | **16,700** |
+| `util/embedding_util.py` | 51 | 1,671 |
+| `util/database_conection.py` | 66 | 2,349 |
+| `util/ingestion_model_interaction.py` | 164 | 5,718 |
+| **total** | **508** | **17,250** |
 
 → [Full documentation](docs/README.md) ·
 [how this was measured](docs/measurement.md) ·

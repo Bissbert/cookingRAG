@@ -1,15 +1,8 @@
 # 4 — Storage: `util/database_conection.py`
 
 [← back to the overview](../README.md) · source:
-[`util/database_conection.py`](../util/database_conection.py) · 62 lines ·
-2,254 bytes
-
-> **Status note.** This write-up describes the code as it stood during the
-> documentation pass. BUG-08 — the database name interpolated unquoted into SQL
-> — has since been fixed on the default branch in commit `6ab82c23`. BUG-09,
-> the hard-coded `embed_dim=1536` against `bge-m3`, is confirmed and still
-> open: changing the width needs a reindex plan for the existing vector column.
-> See [Bugs found](BUGS-FOUND.md).
+[`util/database_conection.py`](../util/database_conection.py) · 66 lines ·
+2,349 bytes
 
 Two functions. `setup_database()` makes sure the target database exists;
 `setup_vector_store()` builds the `PGVectorStore` and wraps it in a
@@ -42,11 +35,17 @@ regardless of `PG_DB_NAME`. The second, made by `llama_index`, goes to
 `PG_DB_NAME` itself. Creating a database requires a role with `CREATEDB`, which
 is one reason the default `PG_USER=postgres` is baked in.
 
-`setup_database()` interpolates `db_name` straight into both statements with an
-f-string, including into `CREATE DATABASE {db_name}`. `PG_DB_NAME` comes from
-the environment, so it is not attacker-controlled in any normal deployment, but
-it is also not quoted or validated — a database name with a hyphen in it will
-produce a syntax error rather than a quoted identifier.
+`setup_database()` binds `db_name` as a query parameter in the existence check
+and builds `CREATE DATABASE` with `psycopg2.sql.Identifier`, so the name is
+quoted as an identifier rather than pasted into the SQL. Against a pgvector
+container, with a name that would break unquoted SQL
+([`media/captures/linux-run.txt`](../media/captures/linux-run.txt)):
+
+```
+$ PG_DB_NAME="recipe-db; x" python3 -c "from util.database_conection import setup_database; setup_database(); setup_database()"
+Database 'recipe-db; x' created.
+Database 'recipe-db; x' already exists.
+```
 
 ## The table
 
@@ -69,7 +68,7 @@ CREATE TABLE public.data_recipes (
 | Column | Type | Holds |
 |---|---|---|
 | `id` | `BIGSERIAL` | surrogate key, assigned by PostgreSQL |
-| `text` | `VARCHAR` | the flattened node text from [03](03-indexing.md) — in practice title and cook time only |
+| `text` | `VARCHAR` | the flattened node text from [03](03-indexing.md): title, cook time, ingredients and instructions |
 | `metadata_` | `JSON` | `{"type": ..., "dietary_preference": ...}` plus `llama_index` bookkeeping |
 | `node_id` | `VARCHAR` | the `TextNode` UUID |
 | `embedding` | `VECTOR(1536)` | the bge-m3 vector |
@@ -92,16 +91,16 @@ approximate indexes cost recall and only pay off in the thousands of rows. It is
 worth stating explicitly because "vector store" tends to imply an index is
 present.
 
-## The `embed_dim = 1536` question
+## The `embed_dim = 1536` question ([BUG-09](BUGS-FOUND.md#bug-09), open)
 
 `embed_dim=1536` is hard-coded, with the comment `# Adjust based on your
 embedding model`. 1536 is the width of OpenAI's `text-embedding-ada-002` and is
 the `PGVectorStore` default; it is what the column is declared as, above.
 
 The configured embedding model is not an OpenAI model — it is `bge-m3`, set in
-`util/embedding_util.py`. **The width bge-m3 actually returns was not measured
-during this pass**, because the model is not available on the machine these docs
-were written on (see [measurement](measurement.md)). What can be stated from the
+`util/embedding_util.py`. **The width bge-m3 actually returns has not been
+measured**: the Linux containers used for [measurement](measurement.md) have
+no Ollama models, and the Ollama metadata for `bge-m3` reports 1024. What can be stated from the
 code alone is that the two numbers are set in two different files by two
 different mechanisms, and nothing reconciles them: the column width comes from a
 literal in `util/database_conection.py`, and the vector width comes from
@@ -149,9 +148,9 @@ the application.
 lines are byte-identical between the two files, and so is the
 `PGVectorStore.from_params()` block apart from the name of the variable holding
 the database — `diff` of those ranges is empty. Nothing has diverged yet; the
-cost is that any change has to be made in both places. What the query-side copy
-does lack is `setup_database()`, and its imports use paths that no longer
-exist. See [05 — Query](05-query.md).
+cost is that any change has to be made in both places. The query-side copy has no
+`setup_database()`; it expects the database to exist already. See
+[05 — Query](05-query.md).
 
 The filename is spelled `database_conection.py` (one `n`).
 
