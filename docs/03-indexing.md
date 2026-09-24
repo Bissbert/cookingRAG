@@ -98,31 +98,34 @@ Everything the recipe says is in the embedded text, so a question such as
 embedding. The `vegetarian` half is also a metadata value, but the default
 query path does not filter on metadata unless asked to.
 
-Until commit `13980e08` this function read `instructions` and
+Until commit
+[`13980e08`](https://github.com/Bissbert/cookingRAG/commit/13980e08) this function read `instructions` and
 `Ingredient`-shaped elements, the shape of the older export described in
-[02 — Extraction](02-extraction.md), and embedded only the title and cook time
-([BUG-01](BUGS-FOUND.md#bug-01)).
+[02 — Extraction](02-extraction.md), and embedded only the title and cook time.
 
 ## The embedding model
 
 ```python
+EMBED_MODEL = os.environ.get('EMBED_MODEL', 'bge-m3')
+OLLAMA_BASE_URL = os.environ.get('OLLAMA_BASE_URL', 'http://localhost:11434')
+...
 ollama_embedding = OllamaEmbedding(
-    model_name="bge-m3",
-    base_url="http://localhost:11434",
+    model_name=EMBED_MODEL,
+    base_url=OLLAMA_BASE_URL,
     ollama_additional_kwargs={"mirostat": 0},
 )
 ```
 
 Three things worth knowing:
 
-- `base_url` is **hard-coded**. Unlike the database settings, there is no
-  environment variable; an Ollama daemon on another host or port requires a
-  source edit.
+- The model and the URL come from `EMBED_MODEL` and `OLLAMA_BASE_URL`, with
+  the defaults shown. See [06 — Configuration](06-configuration.md).
 - `initEmbeddingModel()` assigns this to `Settings.embed_model`, the global
-  `llama_index` setting. That is what makes `VectorStoreIndex(...)` in
-  `ingest_recipes.py` embed with bge-m3 rather than with the OpenAI default.
-- `bge-m3` is a third required model, and the README's quick start does not
-  mention pulling it. Ingestion fails without it.
+  `llama_index` setting. Both entry points call it, so ingestion and
+  `query_recipes.py` embed with the same model rather than with the OpenAI
+  default ([#5](https://github.com/Bissbert/cookingRAG/issues/5)).
+- `embedding_dim()` gives the vector width of that model, and the storage layer
+  sizes its column with it ([04 — Storage](04-storage.md#the-vector-width)).
 
 `get_nodes_from_objs` is annotated `-> TextNode` but returns `List[TextNode]`.
 

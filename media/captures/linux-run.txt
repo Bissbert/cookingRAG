@@ -16,10 +16,10 @@ Version: 0.12.2
 | --------------------------- | --- |
 | python                      | OK   3.12.14 |
 | ollama daemon               | FAIL unreachable at http://localhost:11434 (<urlopen error [Errno 99] Cannot assign requested address>) |
-|   model llama3.2-vision:90b | FAIL unknown - daemon down (util/ingestion_model_interaction.py:14) |
-|   model qwq                 | FAIL unknown - daemon down (util/ingestion_model_interaction.py:17) |
-|   model bge-m3              | FAIL unknown - daemon down (util/embedding_util.py:10) |
-| postgres tcp                | OK   cookingrag-db-49291:5432 open |
+|   model llama3.2-vision:90b | FAIL unknown - daemon down (util/ingestion_model_interaction.py:23) |
+|   model qwq                 | FAIL unknown - daemon down (util/ingestion_model_interaction.py:26) |
+|   model bge-m3              | FAIL unknown - daemon down (util/embedding_util.py:12) |
+| postgres tcp                | OK   cookingrag-db-18335:5432 open |
 | psycopg2                    | OK   importable |
 | llama_index.core            | OK   0.12.2 |
 
@@ -29,13 +29,13 @@ Cannot run end to end. Missing: ollama daemon, model llama3.2-vision:90b, model 
 | File                                  | Lines | Bytes |
 | ------------------------------------- | -----: | ----: |
 | `ingest_recipes.py`                   |   127 |  3,863 |
-| `query_recipes.py`                    |    53 |  1,740 |
+| `query_recipes.py`                    |    44 |  1,448 |
 | `util/recipe.py`                      |    32 |  1,498 |
 | `util/json_util.py`                   |    15 |    411 |
-| `util/embedding_util.py`              |    51 |  1,671 |
-| `util/database_conection.py`          |    66 |  2,349 |
+| `util/embedding_util.py`              |    82 |  2,777 |
+| `util/database_conection.py`          |    67 |  2,366 |
 | `util/ingestion_model_interaction.py` |   164 |  5,718 |
-| **total**                             | **508** | **17,250** |
+| **total**                             | **531** | **18,081** |
 
 === entry points: --help
 ingest_recipes.py --help  exit=0
@@ -44,7 +44,7 @@ query_recipes.py --help   exit=0
 === tools/show_schema.py
 Parameters taken from util/database_conection.py:
     table_name = 'recipes'
-    embed_dim  = 1536
+    embed_dim  = 1024  (embedding_dim() for bge-m3)
     schema     = 'public'  (from_params default)
     database   = 'recipe_db'  (PG_DB_NAME)
 
@@ -56,7 +56,7 @@ CREATE TABLE public.data_recipes (
 	text VARCHAR NOT NULL, 
 	metadata_ JSON, 
 	node_id VARCHAR, 
-	embedding VECTOR(1536), 
+	embedding VECTOR(1024), 
 	PRIMARY KEY (id)
 )
 
@@ -133,23 +133,23 @@ Blobs in the full object graph (all refs, all history)
 
 | Top-level path | Blobs | Uncompressed bytes | Share |
 | --- | ---: | ---: | ---: |
-| `venv` | 14,948 | 253,436,221 | 99.2 % |
+| `venv` | 14,948 | 253,436,221 | 99.1 % |
 | `testRecipes` | 5 | 1,548,272 | 0.6 % |
-| `docs` | 18 | 143,440 | 0.1 % |
-| `media` | 1 | 121,210 | 0.0 % |
-| `README.md` | 10 | 112,434 | 0.0 % |
-| `util` | 19 | 46,500 | 0.0 % |
-| `tools` | 7 | 17,502 | 0.0 % |
+| `media` | 3 | 248,519 | 0.1 % |
+| `docs` | 26 | 207,497 | 0.1 % |
+| `README.md` | 11 | 125,838 | 0.0 % |
+| `util` | 21 | 51,643 | 0.0 % |
+| `tools` | 9 | 23,243 | 0.0 % |
 | `ingest_recipes.py` | 5 | 16,697 | 0.0 % |
+| `tests` | 5 | 12,690 | 0.0 % |
+| `query_recipes.py` | 4 | 6,568 | 0.0 % |
 | `.DS_Store` | 1 | 6,148 | 0.0 % |
-| `query_recipes.py` | 3 | 5,120 | 0.0 % |
 | `.gitignore` | 2 | 4,011 | 0.0 % |
-| `recipeExport-3889e5c2-fd85-4e50-8a61-024a12744127.json` | 1 | 3,689 | 0.0 % |
-| **total** | **15,023** | **255,463,578** | |
+| **total** | **15,045** | **255,694,004** | |
 
 Packed size reported by git:
 
-    count: 0
+    count: 39
     in-pack: 16965
     size-pack: 78.31 MiB
 
@@ -162,12 +162,10 @@ Database 'recipe-db; x' created.
 Database 'recipe-db; x' already exists.
 exit=0
 
-=== query_recipes.py against an empty store, no OpenAI key
+=== query_recipes.py against an empty store, no Ollama daemon, no OpenAI key
 exit=1
-ValueError: No API key found for OpenAI.
-ValueError: 
-Could not load OpenAI embedding model. If you intended to use OpenAI, please check your OPENAI_API_KEY.
-No API key found for OpenAI.
+last line: httpx.ConnectError: [Errno 99] Cannot assign requested address
+lines mentioning OpenAI: 0
 
 === tools/make_media.py reproduces media/corpus.jpg
 Pillow 12.3.0 size (1392, 405) committed (1392, 405)
