@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Print the PostgreSQL table cookingRAG creates, without needing a server.
 
-util/database_conection.py hands table_name="recipes" and embed_dim=1536 to
-PGVectorStore. The table that llama_index then creates is not called "recipes"
+util/database_conection.py hands table_name="recipes" and the embedding
+model's width (util/embedding_util.embedding_dim()) to PGVectorStore. The table that llama_index then creates is not called "recipes"
 and its columns are not obvious from the call site, so this script compiles the
 SQLAlchemy model llama_index would use and prints the DDL for the PostgreSQL
 dialect.
@@ -26,14 +26,15 @@ def main():
     from llama_index.vector_stores.postgres.base import get_data_model
 
     import util.database_conection as dbc
+    from util.embedding_util import EMBED_MODEL, embedding_dim
 
-    table_name = "recipes"   # util/database_conection.py:58
-    embed_dim = 1536         # util/database_conection.py:59
+    table_name = "recipes"   # util/database_conection.py, setup_vector_store()
+    embed_dim = embedding_dim()
     schema_name = "public"   # PGVectorStore.from_params default
 
     print("Parameters taken from util/database_conection.py:")
     print("    table_name = %r" % table_name)
-    print("    embed_dim  = %r" % embed_dim)
+    print("    embed_dim  = %r  (embedding_dim() for %s)" % (embed_dim, EMBED_MODEL))
     print("    schema     = %r  (from_params default)" % schema_name)
     print("    database   = %r  (PG_DB_NAME)" % dbc.db_name)
     print()
